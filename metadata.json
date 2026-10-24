@@ -1,0 +1,10 @@
+{
+  "name": "Remix motoride",
+  "description": "Motoride – Ride \u0026 Courier Booking\n\nMotoride is a smart ride-booking and courier delivery platform where customers can offer their own fare for a trip or delivery request. Captains can view available requests and choose the offers that work for them.\n\n🚗 Ride Booking\n\nBook a bike ride by entering your pickup and drop-off locations and offering the fare you are willing to pay. Nearby captains can view your request and accept the offer.\n\n📦 Courier Booking\n\nSend packages, documents, and other permitted items with Motoride. Enter the pickup and delivery locations, provide package details, and offer your delivery fare. Nearby captains can choose suitable courier requests.\n\n💰 Offer Fare \u0026 Bidding\n\nMotoride gives customers flexibility to suggest a fare instead of relying only on a fixed price. Captains can review ride and courier offers and decide which requests to accept.\n\n📍 Real-Time Ride Updates\n\nTrack the progress of your accepted booking with pickup and drop-off information, captain details, and real-time trip status.\n\n🏍️ Captain Platform\n\nCaptains can receive nearby ride and courier requests, review customer-offered fares, accept suitable bookings, manage active trips, and track completed-trip earnings.\n\n🛡️ Simple \u0026 Connected Platform\n\nMotoride connects Customers, Captains, and Admin through one platform to manage bookings, ride status, courier requests, payments, and account activity.\n\nMotoride — Offer Your Fare. Book Your Ride. Send Your Courier.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,32 @@
+<svg viewBox="0 0 256 256" width="256" height="256" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="gpsRadial" cx="35%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#60a5fa" />
+      <stop offset="50%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </radialGradient>
+    <filter id="gpsGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#0284c7" flood-opacity="0.45" />
+    </filter>
+  </defs>
+
+  <!-- Outer Radar Pulse Ring -->
+  <circle cx="128" cy="128" r="120" fill="none" stroke="#38bdf8" stroke-width="6" stroke-dasharray="8 6" opacity="0.6" />
+
+  <!-- Core GPS Beacon Disc -->
+  <circle cx="128" cy="128" r="102" fill="url(#gpsRadial)" stroke="#ffffff" stroke-width="12" filter="url(#gpsGlow)" />
+
+  <!-- Inner Concentric Precision Circle -->
+  <circle cx="128" cy="128" r="62" fill="none" stroke="#ffffff" stroke-width="6" opacity="0.4" />
+
+  <!-- Crosshair Ticks -->
+  <line x1="128" y1="36" x2="128" y2="68" stroke="#ffffff" stroke-width="12" stroke-linecap="round" />
+  <line x1="128" y1="188" x2="128" y2="220" stroke="#ffffff" stroke-width="12" stroke-linecap="round" />
+  <line x1="36" y1="128" x2="68" y2="128" stroke="#ffffff" stroke-width="12" stroke-linecap="round" />
+  <line x1="188" y1="128" x2="220" y2="128" stroke="#ffffff" stroke-width="12" stroke-linecap="round" />
+
+  <!-- Center Pinpoint Dot -->
+  <circle cx="128" cy="128" r="26" fill="#ffffff" />
+  <circle cx="128" cy="128" r="12" fill="#2563eb" />
+</svg>
+

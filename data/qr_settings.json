@@ -1,0 +1,9 @@
+{
+  "id": "official_admin_qr",
+  "qr_image_url": "/official_admin_qr.svg",
+  "upi_id": "hemant76@idbi",
+  "merchant_name": "Hemant",
+  "note": "Scan to Pay with any UPI App (Google Pay, PhonePe, Paytm, BHIM) to top up wallet balance or deposit commission.",
+  "is_active": true,
+  "updated_at": "2026-09-28T01:16:00.000Z"
+}

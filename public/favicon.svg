@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="112" fill="#000000"/>
+  <!-- Speed Lines -->
+  <path d="M120 170 h80 M70 195 h130 M60 220 h120" stroke="#ffffff" stroke-width="16" stroke-linecap="round"/>
+  <!-- Motorcycle Racer Silhouette -->
+  <g fill="#ffffff">
+    <!-- Helmet -->
+    <circle cx="310" cy="130" r="26"/>
+    <!-- Racer Body & Bike Fairing -->
+    <path d="M300 156 L240 210 L275 255 L320 200 L400 185 L420 205 L375 270 L340 295 L270 295 L200 240 L160 240 L160 220 L210 220 L255 180 L290 156 Z"/>
+    <!-- Front Wheel -->
+    <circle cx="395" cy="270" r="42" fill="none" stroke="#ffffff" stroke-width="18"/>
+    <!-- Rear Wheel -->
+    <circle cx="180" cy="270" r="42" fill="none" stroke="#ffffff" stroke-width="18"/>
+  </g>
+  <!-- Motoride Text -->
+  <text x="256" y="405" text-anchor="middle" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="64" letter-spacing="-1">Motoride</text>
+</svg>

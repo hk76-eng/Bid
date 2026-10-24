@@ -1,0 +1,11 @@
+# Motoride Platform Robots Configuration
+User-agent: *
+Allow: /
+Allow: /passenger
+Allow: /captain
+
+# Protect private admin dashboard and API endpoints from indexing
+Disallow: /admin
+Disallow: /api/
+
+Sitemap: https://motoride-roan.vercel.app/sitemap.xml

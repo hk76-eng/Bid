@@ -1,0 +1,656 @@
+{
+  "accounts": [
+    [
+      "freelanceseoservices01@gmail.com_admin",
+      {
+        "id": "usr_1789917331400_mwfr8",
+        "email": "freelanceseoservices01@gmail.com",
+        "password_hash": "Freelanceseoservices01@1978",
+        "name": "Freelanceseoservices01",
+        "role": "admin",
+        "phone": "",
+        "vehicle_model": "",
+        "plate_number": "",
+        "vehicle_type": "bike",
+        "wallet_balance": 200,
+        "member_since": "2026-09-20T15:15:31.400Z",
+        "created_at": "2026-09-20T15:15:31.400Z"
+      }
+    ],
+    [
+      "osmskart@gmail.com_passenger",
+      {
+        "id": "usr_1789917923920_d4kaz",
+        "email": "osmskart@gmail.com",
+        "password_hash": "Osmskart@1978",
+        "name": "Ritu Sharma",
+        "role": "passenger",
+        "phone": "+919876543210",
+        "vehicle_model": "",
+        "plate_number": "",
+        "vehicle_type": "bike",
+        "wallet_balance": 200,
+        "member_since": "2026-09-20T15:25:23.920Z",
+        "created_at": "2026-09-20T15:25:23.920Z",
+        "avatar_url": "/default_profile_smile.jpg"
+      }
+    ],
+    [
+      "psg_user@test.com",
+      {
+        "id": "usr_1790696783946_q7k77",
+        "email": "psg_user@test.com",
+        "password_hash": "password123",
+        "name": "Passenger User",
+        "role": "passenger",
+        "phone": "",
+        "vehicle_model": "",
+        "plate_number": "",
+        "vehicle_type": "bike",
+        "wallet_balance": 200,
+        "member_since": "2026-09-29T15:46:23.946Z",
+        "created_at": "2026-09-29T15:46:23.946Z",
+        "avatar_url": "/default_profile_smile.jpg"
+      }
+    ],
+    [
+      "cpt_user@test.com",
+      {
+        "id": "usr_1790696783958_wo2xz",
+        "email": "cpt_user@test.com",
+        "password_hash": "password123",
+        "name": "Captain User",
+        "role": "captain",
+        "phone": "",
+        "vehicle_model": "",
+        "plate_number": "",
+        "vehicle_type": "bike",
+        "wallet_balance": 500,
+        "member_since": "2026-09-29T15:46:23.958Z",
+        "created_at": "2026-09-29T15:46:23.958Z",
+        "avatar_url": "/default_profile_smile.jpg"
+      }
+    ],
+    [
+      "adm_user@test.com",
+      {
+        "id": "usr_1790696783964_frllr",
+        "email": "adm_user@test.com",
+        "password_hash": "password123",
+        "name": "Admin User",
+        "role": "admin",
+        "phone": "",
+        "vehicle_model": "",
+        "plate_number": "",
+        "vehicle_type": "bike",
+        "wallet_balance": 200,
+        "member_since": "2026-09-29T15:46:23.964Z",
+        "created_at": "2026-09-29T15:46:23.964Z",
+        "avatar_url": "/default_profile_smile.jpg"
+      }
+    ],
+    [
+      "mojobiketaxi@gmail.com_captain",
+      {
+        "id": "cpt_mojobiketaxi",
+        "email": "mojobiketaxi@gmail.com",
+        "password_hash": "123456",
+        "name": "Hemant Kumar",
+        "role": "captain",
+        "phone": "+91 9876500111",
+        "vehicle_model": "Bajaj Pulsar 150",
+        "plate_number": "PB65ZZ1234",
+        "vehicle_type": "bike",
+        "wallet_balance": 500,
+        "member_since": "2024-01-01T00:00:00.000Z",
+        "created_at": "2024-01-01T00:00:00.000Z"
+      }
+    ],
+    [
+      "cpt_mojobiketaxi",
+      {
+        "id": "cpt_mojobiketaxi",
+        "email": "mojobiketaxi@gmail.com",
+        "password_hash": "123456",
+        "name": "Hemant Kumar",
+        "role": "captain",
+        "phone": "+91 9876500111",
+        "vehicle_model": "Bajaj Pulsar 150",
+        "plate_number": "PB65ZZ1234",
+        "vehicle_type": "bike",
+        "wallet_balance": 500,
+        "member_since": "2024-01-01T00:00:00.000Z",
+        "created_at": "2024-01-01T00:00:00.000Z"
+      }
+    ],
+    [
+      "mojobiketaxi@gmail.com",
+      {
+        "id": "cpt_mojobiketaxi",
+        "email": "mojobiketaxi@gmail.com",
+        "password_hash": "123456",
+        "name": "Hemant Kumar",
+        "role": "captain",
+        "phone": "+91 9876500111",
+        "vehicle_model": "Bajaj Pulsar 150",
+        "plate_number": "PB65ZZ1234",
+        "vehicle_type": "bike",
+        "wallet_balance": 500,
+        "member_since": "2024-01-01T00:00:00.000Z",
+        "created_at": "2024-01-01T00:00:00.000Z"
+      }
+    ],
+    [
+      "osmskart@gmail.com_admin",
+      {
+        "id": "adm_official_admin",
+        "email": "osmskart@gmail.com",
+        "password_hash": "123456",
+        "name": "Admin Hemant",
+        "role": "admin",
+        "phone": "+91 9876543210",
+        "wallet_balance": 0,
+        "member_since": "2026-10-11T09:46:25.089Z",
+        "created_at": "2026-10-11T09:46:25.089Z"
+      }
+    ]
+  ],
+  "captains": [
+    [
+      "usr_1790696783958_wo2xz",
+      {
+        "id": "usr_1790696783958_wo2xz",
+        "profile_id": "prof_usr_1790696783958_wo2xz",
+        "full_name": "Captain User",
+        "email": "cpt_user@test.com",
+        "phone": "",
+        "avatar_url": "/default_profile_smile.jpg",
+        "is_online": true,
+        "is_approved": true,
+        "is_active": true,
+        "current_lat": 30.70790717421029,
+        "current_lng": 76.72974485885874,
+        "rating": 4.95,
+        "total_rides": 0,
+        "vehicle": {
+          "id": "veh_usr_1790696783958_wo2xz",
+          "captain_id": "usr_1790696783958_wo2xz",
+          "model": "",
+          "plate_number": "",
+          "vehicle_type": "bike",
+          "color": "Black",
+          "is_active": true
+        },
+        "created_at": "2026-09-29T15:46:23.958Z",
+        "documents": {
+          "driving_licence": {
+            "number": "DL-0420110012345",
+            "front_image": "data:image/jpeg;base64,sample123",
+            "status": "pending",
+            "uploaded_at": "2026-10-02T14:56:10.384Z"
+          }
+        },
+        "updated_at": "2026-10-02T14:56:10.384Z"
+      }
+    ],
+    [
+      "a77ff2d8-e2f5-475f-a935-a6a1a8ace5dd",
+      {
+        "id": "a77ff2d8-e2f5-475f-a935-a6a1a8ace5dd",
+        "profile_id": "prof_a77ff2d8-e2f5-475f-a935-a6a1a8ace5dd",
+        "full_name": "Captain Online",
+        "phone": "+91 98765 00000",
+        "is_online": true,
+        "is_approved": true,
+        "is_active": true,
+        "current_lat": 30.612183,
+        "current_lng": 76.852417,
+        "current_heading": 45,
+        "rating": 4.92,
+        "total_rides": 38,
+        "today_earnings": 0,
+        "total_earnings": 8200,
+        "vehicle": {
+          "id": "veh_a77ff2d8-e2f5-475f-a935-a6a1a8ace5dd",
+          "captain_id": "a77ff2d8-e2f5-475f-a935-a6a1a8ace5dd",
+          "model": "Honda CB Shine PB65B1010",
+          "plate_number": "PB65B1010",
+          "vehicle_type": "bike",
+          "color": "Black",
+          "is_active": true
+        },
+        "created_at": "2026-09-30T13:40:25.556Z",
+        "updated_at": "2026-09-30T13:44:34.119Z"
+      }
+    ],
+    [
+      "mojobiketaxi@gmail.com",
+      {
+        "id": "cpt_mojobiketaxi",
+        "profile_id": "prof_cpt_mojobiketaxi",
+        "full_name": "Hemant kashyap",
+        "email": "mojobiketaxi@gmail.com",
+        "phone": "+91 9876500111",
+        "is_online": true,
+        "is_approved": true,
+        "is_active": true,
+        "current_lat": 30.7046,
+        "current_lng": 76.7178,
+        "rating": 4.95,
+        "total_rides": 142,
+        "vehicle": {
+          "id": "veh_cpt_mojobiketaxi",
+          "captain_id": "cpt_mojobiketaxi",
+          "model": "Bajaj Pulsar 150",
+          "plate_number": "PB65ZZ1234",
+          "vehicle_type": "bike",
+          "color": "Black",
+          "is_active": true
+        },
+        "created_at": "2024-01-01T00:00:00.000Z"
+      }
+    ],
+    [
+      "cpt_mojobiketaxi",
+      {
+        "id": "cpt_mojobiketaxi",
+        "profile_id": "prof_cpt_mojobiketaxi",
+        "full_name": "Hemant kashyap",
+        "email": "mojobiketaxi@gmail.com",
+        "phone": "+91 9876500111",
+        "is_online": true,
+        "is_approved": true,
+        "is_active": true,
+        "current_lat": 30.7046,
+        "current_lng": 76.7178,
+        "rating": 4.95,
+        "total_rides": 142,
+        "vehicle": {
+          "id": "veh_cpt_mojobiketaxi",
+          "captain_id": "cpt_mojobiketaxi",
+          "model": "Bajaj Pulsar 150",
+          "plate_number": "PB65ZZ1234",
+          "vehicle_type": "bike",
+          "color": "Black",
+          "is_active": true
+        },
+        "created_at": "2024-01-01T00:00:00.000Z"
+      }
+    ]
+  ],
+  "passengers": [
+    [
+      "usr_1789917923920_d4kaz",
+      {
+        "id": "usr_1789917923920_d4kaz",
+        "profile_id": "prof_usr_1789917923920_d4kaz",
+        "full_name": "Ritu Sharma",
+        "email": "osmskart@gmail.com",
+        "phone": "+919876543210",
+        "avatar_url": "/default_profile_smile.jpg",
+        "total_rides": 0,
+        "rating": 5,
+        "wallet_balance": 200,
+        "emergency_contact": "+919876543210",
+        "created_at": "2026-09-20T15:25:23.920Z"
+      }
+    ],
+    [
+      "usr_1790696783946_q7k77",
+      {
+        "id": "usr_1790696783946_q7k77",
+        "profile_id": "prof_usr_1790696783946_q7k77",
+        "full_name": "Passenger User",
+        "email": "psg_user@test.com",
+        "phone": "",
+        "avatar_url": "/default_profile_smile.jpg",
+        "total_rides": 0,
+        "rating": 5,
+        "wallet_balance": 200,
+        "emergency_contact": "",
+        "created_at": "2026-09-29T15:46:23.946Z"
+      }
+    ]
+  ],
+  "wallets": [
+    [
+      "usr_1789917331400_mwfr8",
+      {
+        "balance": 200,
+        "currency": "₹"
+      }
+    ],
+    [
+      "usr_1789917923920_d4kaz",
+      {
+        "balance": 200,
+        "currency": "₹"
+      }
+    ],
+    [
+      "cpt_test_101",
+      {
+        "balance": 226,
+        "currency": "₹"
+      }
+    ],
+    [
+      "usr_1790696783946_q7k77",
+      {
+        "balance": 200,
+        "currency": "₹"
+      }
+    ],
+    [
+      "usr_1790696783958_wo2xz",
+      {
+        "balance": 500,
+        "currency": "₹"
+      }
+    ],
+    [
+      "usr_1790696783964_frllr",
+      {
+        "balance": 200,
+        "currency": "₹"
+      }
+    ],
+    [
+      "a77ff2d8-e2f5-475f-a935-a6a1a8ace5dd",
+      {
+        "balance": 500,
+        "currency": "₹"
+      }
+    ],
+    [
+      "mojobiketaxi@gmail.com",
+      {
+        "balance": 500,
+        "currency": "₹"
+      }
+    ],
+    [
+      "+91 9876543210",
+      {
+        "balance": 500,
+        "currency": "₹"
+      }
+    ],
+    [
+      "9876543210",
+      {
+        "balance": 500,
+        "currency": "₹"
+      }
+    ],
+    [
+      "6c53731b-9628-4bd5-b6be-a98c78d48494",
+      {
+        "balance": 500,
+        "currency": "₹"
+      }
+    ],
+    [
+      "+919877896578",
+      {
+        "balance": 500,
+        "currency": "₹"
+      }
+    ],
+    [
+      "cpt_mojobiketaxi",
+      {
+        "balance": 500,
+        "currency": "₹"
+      }
+    ]
+  ],
+  "rides": [
+    [
+      "ride_1790690910527_73bwg",
+      {
+        "id": "ride_1790690910527_73bwg",
+        "ride_code": "RIDE-6993",
+        "passenger_id": "usr_1789917923920_d4kaz",
+        "passenger_name": "Ritu Sharma",
+        "passenger_phone": "+919876543210",
+        "passenger_avatar": "/passenger_avatar_default.jpg",
+        "passenger_rating": 5,
+        "passenger_total_rides": 15,
+        "pickup_address": "Chandigarh Tricity Area",
+        "pickup_lat": 30.612183,
+        "pickup_lng": 76.852417,
+        "dropoff_address": "Sector 66, Mohali Bawa White House",
+        "dropoff_lat": 30.6741254,
+        "dropoff_lng": 76.74273029999999,
+        "distance_km": 21.4,
+        "duration_minutes": 21,
+        "estimated_fare": 214,
+        "offered_fare": 214,
+        "final_fare": 214,
+        "ride_type": "bike",
+        "status": "cancelled_by_passenger",
+        "payment_method": "upi",
+        "payment_status": "pending",
+        "created_at": "2026-09-29T14:08:30.527Z",
+        "updated_at": "2026-09-29T14:09:11.363Z",
+        "offers": [],
+        "cancellation_reason": "Passenger cancelled/closed the active ride"
+      }
+    ],
+    [
+      "ride_1790690965215_vqdcw",
+      {
+        "id": "ride_1790690965215_vqdcw",
+        "ride_code": "RIDE-3267",
+        "passenger_id": "usr_1789917923920_d4kaz",
+        "passenger_name": "Ritu Sharma",
+        "passenger_phone": "+919876543210",
+        "passenger_avatar": "/passenger_avatar_default.jpg",
+        "passenger_rating": 5,
+        "passenger_total_rides": 15,
+        "pickup_address": "Chandigarh Tricity Area",
+        "pickup_lat": 30.612183,
+        "pickup_lng": 76.852417,
+        "dropoff_address": "Sector 70, Mohali Market",
+        "dropoff_lat": 30.704649,
+        "dropoff_lng": 76.717873,
+        "distance_km": 24.5,
+        "duration_minutes": 22,
+        "estimated_fare": 245,
+        "offered_fare": 245,
+        "final_fare": 245,
+        "ride_type": "bike",
+        "status": "cancelled_by_passenger",
+        "payment_method": "upi",
+        "payment_status": "pending",
+        "created_at": "2026-09-29T14:09:25.216Z",
+        "updated_at": "2026-09-29T14:10:17.817Z",
+        "offers": [],
+        "cancellation_reason": "Passenger cancelled/closed the active ride"
+      }
+    ],
+    [
+      "ride_1790691052881_c8zb7",
+      {
+        "id": "ride_1790691052881_c8zb7",
+        "ride_code": "RIDE-5716",
+        "passenger_id": "usr_1789917923920_d4kaz",
+        "passenger_name": "Ritu Sharma",
+        "passenger_phone": "+919876543210",
+        "passenger_avatar": "/passenger_avatar_default.jpg",
+        "passenger_rating": 5,
+        "passenger_total_rides": 15,
+        "pickup_address": "Chandigarh Tricity Area",
+        "pickup_lat": 30.612183,
+        "pickup_lng": 76.852417,
+        "dropoff_address": "Motia City, Dhakoli, Zirakpur",
+        "dropoff_lat": 30.637214,
+        "dropoff_lng": 76.843114,
+        "distance_km": 3.3,
+        "duration_minutes": 5,
+        "estimated_fare": 33,
+        "offered_fare": 33,
+        "final_fare": 33,
+        "ride_type": "bike",
+        "status": "cancelled_by_passenger",
+        "payment_method": "upi",
+        "payment_status": "pending",
+        "created_at": "2026-09-29T14:10:52.881Z",
+        "updated_at": "2026-09-29T14:11:07.780Z",
+        "offers": [],
+        "cancellation_reason": "Passenger cancelled/closed the active ride"
+      }
+    ],
+    [
+      "ride_1790695185367_zz4nm",
+      {
+        "id": "ride_1790695185367_zz4nm",
+        "ride_code": "RIDE-2545",
+        "passenger_id": "psg_1790695185367_u12m8",
+        "passenger_name": "Passenger",
+        "passenger_phone": "",
+        "passenger_avatar": null,
+        "passenger_rating": 5,
+        "passenger_total_rides": 48,
+        "pickup_address": "Sector 70, Mohali",
+        "pickup_lat": 30.7046,
+        "pickup_lng": 76.7178,
+        "dropoff_address": "Phase 8B, Mohali",
+        "dropoff_lat": 30.7182,
+        "dropoff_lng": 76.7321,
+        "distance_km": 3.5,
+        "duration_minutes": 10,
+        "estimated_fare": 65,
+        "offered_fare": 80,
+        "final_fare": 80,
+        "ride_type": "bike",
+        "status": "trip_completed",
+        "payment_method": "cash",
+        "payment_status": "paid",
+        "created_at": "2026-09-29T15:19:45.367Z",
+        "updated_at": "2026-09-29T15:19:45.408Z",
+        "offers": [],
+        "captain_id": "cpt_test_101",
+        "captain_name": "Harpreet Singh",
+        "captain_phone": "",
+        "vehicle_model": "Bike",
+        "plate_number": "",
+        "captain_avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+        "captain_current_lat": 30.7182,
+        "captain_current_lng": 76.7321,
+        "captain_heading": 42,
+        "trip_started_at": "2026-09-29T15:19:45.397Z",
+        "trip_completed_at": "2026-09-29T15:19:45.408Z",
+        "completed_at": "2026-09-29T15:19:45.408Z",
+        "fare_amount": 80
+      }
+    ],
+    [
+      "ride_1790695484758_jfnqz",
+      {
+        "id": "ride_1790695484758_jfnqz",
+        "ride_code": "RIDE-6659",
+        "passenger_id": "psg_1790695484758_cn4h6",
+        "passenger_name": "Passenger",
+        "passenger_phone": "",
+        "passenger_avatar": null,
+        "passenger_rating": 5,
+        "passenger_total_rides": 48,
+        "pickup_address": "Sector 70, Mohali",
+        "pickup_lat": 30.7046,
+        "pickup_lng": 76.7178,
+        "dropoff_address": "Phase 8B, Mohali",
+        "dropoff_lat": 30.7182,
+        "dropoff_lng": 76.7321,
+        "distance_km": 3.5,
+        "duration_minutes": 10,
+        "estimated_fare": 65,
+        "offered_fare": 80,
+        "final_fare": 80,
+        "ride_type": "bike",
+        "status": "completed",
+        "payment_method": "cash",
+        "payment_status": "paid",
+        "created_at": "2026-09-29T15:24:44.758Z",
+        "updated_at": "2026-09-29T15:24:44.796Z",
+        "offers": [],
+        "captain_id": "cpt_test_101",
+        "captain_name": "Harpreet Singh",
+        "captain_phone": "",
+        "vehicle_model": "Bike",
+        "plate_number": "",
+        "captain_avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+        "captain_current_lat": 30.7182,
+        "captain_current_lng": 76.7321,
+        "captain_heading": 42,
+        "trip_started_at": "2026-09-29T15:24:44.785Z",
+        "trip_completed_at": "2026-09-29T15:24:44.796Z",
+        "completed_at": "2026-09-29T15:24:44.796Z",
+        "fare_amount": 80
+      }
+    ],
+    [
+      "test_ride_999",
+      {
+        "id": "test_ride_999",
+        "ride_code": "TEST_RID",
+        "captain_id": "cpt_test_101",
+        "passenger_id": "psg_user",
+        "pickup_address": "Pickup Location",
+        "pickup_lat": 30.7046,
+        "pickup_lng": 76.7178,
+        "dropoff_address": "Dropoff Location",
+        "dropoff_lat": 30.7182,
+        "dropoff_lng": 76.7321,
+        "final_fare": 100,
+        "offered_fare": 100,
+        "fare_amount": 100,
+        "status": "completed",
+        "ride_type": "bike",
+        "payment_method": "cash",
+        "payment_status": "paid",
+        "created_at": "2026-09-30T13:51:19.926Z",
+        "updated_at": "2026-09-30T13:51:19.926Z",
+        "completed_at": "2026-09-30T13:51:19.926Z",
+        "trip_completed_at": "2026-09-30T13:51:19.926Z"
+      }
+    ]
+  ],
+  "topupRequests": [
+    [
+      "dep_1791712182967_lq9w",
+      {
+        "id": "dep_1791712182967_lq9w",
+        "captain_id": "cpt_mojobiketaxi",
+        "captain_name": "Hemant Kashyap",
+        "captain_phone": "+91 9876543210",
+        "captain_avatar": "",
+        "amount": 500,
+        "utr_number": "UTR123456789",
+        "payment_slip_url": "https://images.unsplash.com/photo-1556742049-0a67d56e0266?w=600",
+        "note": "",
+        "status": "pending",
+        "created_at": "2026-10-11T09:49:42.967Z",
+        "updated_at": "2026-10-11T09:49:42.967Z"
+      }
+    ]
+  ],
+  "topupChat": [
+    [
+      "dep_1791712182967_lq9w",
+      [
+        {
+          "id": "msg_1791712182967",
+          "request_id": "dep_1791712182967_lq9w",
+          "sender_id": "cpt_mojobiketaxi",
+          "sender_role": "captain",
+          "sender_name": "Hemant Kashyap",
+          "message": "Submitted ₹500 top-up request (UTR: UTR123456789) with payment slip proof.",
+          "image_url": "https://images.unsplash.com/photo-1556742049-0a67d56e0266?w=600",
+          "created_at": "2026-10-11T09:49:42.967Z"
+        }
+      ]
+    ]
+  ]
+}
