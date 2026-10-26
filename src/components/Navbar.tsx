@@ -73,7 +73,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center gap-3">
           <img
             src="/motoride-logo.png"
-            alt="Motoride"
+            alt="Bid"
             referrerPolicy="no-referrer"
             className="w-10 h-10 rounded-xl object-cover bg-black border border-white/20 shadow-lg shadow-black/60 shrink-0"
             onError={(e) => {
@@ -83,7 +83,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <span className="font-extrabold text-lg tracking-tight text-white">
-                Motoride
+                Bid
               </span>
               <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                 ₹{pricingSettings.rate_per_km}/KM

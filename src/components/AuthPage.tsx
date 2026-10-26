@@ -28,7 +28,6 @@ import {
 } from 'lucide-react';
 import { UserRole, RideTypeCode, AppHyperlinkConfig } from '../types/motoride';
 import { supabaseAuth, AuthUser } from '../lib/supabaseAuth';
-import { isSupabaseConfigured } from '../lib/supabase';
 import { motorideApi } from '../services/motorideApi';
 import { realtimeSync } from '../services/realtimeSync';
 
@@ -295,7 +294,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
         <div className="flex items-center gap-3">
           <img
             src="/motoride-logo.png"
-            alt="Motoride"
+            alt="Bid"
             referrerPolicy="no-referrer"
             className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl object-cover bg-black border border-white/30 shadow-lg shadow-black/90 shrink-0"
             onError={(e) => {
@@ -305,7 +304,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-black text-lg sm:text-xl tracking-tight text-white">
-                Motoride
+                Bid
               </span>
               <span className="text-xs text-white/80 font-semibold hidden sm:inline">
                 – Ride & Courier Booking
@@ -344,14 +343,14 @@ export const AuthPage: React.FC<AuthPageProps> = ({
             <span>Captain</span>
           </button>
           <a
-            href={appLinkConfig.url || "https://web2apkpro.com/download/E95FB02/Motoride"}
+            href={appLinkConfig.url || "https://web2apkpro.com/download/E95FB02/Bid"}
             target={appLinkConfig.openInNewTab !== false ? "_blank" : "_self"}
             rel="noopener noreferrer"
             className="px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 text-white hover:text-white/80 bg-black border border-white/25 hover:border-white/50 shadow-sm"
-            title={`Download ${appLinkConfig.title || 'Motoride App'}`}
+            title={`Download ${appLinkConfig.title || 'Bid App'}`}
           >
             <Download className="w-3.5 h-3.5" />
-            <span>{appLinkConfig.title || 'Motoride App'}</span>
+            <span>{appLinkConfig.title || 'Bid App'}</span>
           </a>
           </div>
         </div>

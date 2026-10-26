@@ -8,7 +8,6 @@ import { WalletModal } from './components/common/WalletModal';
 import { NotificationsModal } from './components/common/NotificationsModal';
 import { AuthPage } from './components/AuthPage';
 import { supabaseAuth, AuthUser } from './lib/supabaseAuth';
-import { isSupabaseConfigured } from './lib/supabase';
 import { safeStorage } from './lib/safeStorage';
 import { motorideApi } from './services/motorideApi';
 import { initAnalytics, trackPageView, enforceAdminNoIndex } from './utils/analytics';

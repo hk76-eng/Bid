@@ -14,12 +14,20 @@ import {
 import { TopupChatModal } from '../components/common/TopupChatModal';
 import { RideChatModal } from '../components/common/RideChatModal';
 import { motorideApi } from '../services/motorideApi';
-import { SUPABASE_SQL_SCHEMA } from '../lib/sqlSchema';
-import { isSupabaseConfigured, getSupabase, SUPABASE_CONFIG_STATUS } from '../lib/supabase';
+import {
+  getSupabase,
+  isSupabaseConfigured,
+  SUPABASE_CONFIG_STATUS,
+  SUPABASE_SQL_SCHEMA,
+  ensureMediaBucketExists,
+  uploadMediaToSupabase,
+  MOTORIDE_MEDIA_BUCKET,
+  StorageStatus,
+  syncAllAccountsToSupabase,
+} from '../lib/supabase';
 import { isAppwriteConfigured, APPWRITE_CONFIG_STATUS } from '../lib/appwrite';
 import { realtimeSync } from '../services/realtimeSync';
-import { AuthUser, supabaseAuth, syncAllAccountsToSupabase, isDemoAccount, isDemoRide } from '../lib/supabaseAuth';
-import { ensureMediaBucketExists, uploadMediaToSupabase, MOTORIDE_MEDIA_BUCKET, StorageStatus } from '../lib/supabaseStorage';
+import { AuthUser, supabaseAuth, isDemoAccount, isDemoRide } from '../lib/supabaseAuth';
 import {
   getGaMeasurementId,
   saveGaMeasurementId,
@@ -206,6 +214,7 @@ export const AdminWorkspace: React.FC<AdminWorkspaceProps> = ({
   const [bucketStatus, setBucketStatus] = useState<StorageStatus | null>(null);
   const [isCheckingBucket, setIsCheckingBucket] = useState(false);
   const [testUploadUrl, setTestUploadUrl] = useState<string | null>(null);
+
 
   // Motoride App Hyperlink & Download URL Configuration
   const [appLinkConfig, setAppLinkConfig] = useState<AppHyperlinkConfig>(() => motorideApi.getAppHyperlinkConfig());
@@ -1096,7 +1105,7 @@ export const AdminWorkspace: React.FC<AdminWorkspaceProps> = ({
         <div>
           <h1 className="text-xl font-black text-white flex items-center gap-2">
             <Shield className="w-5 h-5 text-indigo-400" />
-            <span>Motoride Global Admin Panel</span>
+            <span>Bid Global Admin Panel</span>
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
             Real-time management for Passengers, Captains, Rides, Fares, and Supabase Database
@@ -1137,7 +1146,6 @@ export const AdminWorkspace: React.FC<AdminWorkspaceProps> = ({
           { key: 'qr', label: 'Official QR Code', icon: QrCode },
           { key: 'app_link', label: 'Motoride App Link', icon: Smartphone },
           { key: 'seo_analytics', label: 'SEO & Analytics', icon: Globe },
-          { key: 'supabase', label: 'Supabase SQL Setup', icon: Database },
         ].map((tab) => {
           const Icon = tab.icon;
           return (

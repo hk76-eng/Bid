@@ -48,7 +48,7 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
           <div className="flex items-center gap-2.5">
             <img
               src="/motoride-logo.png"
-              alt="Motoride"
+              alt="Bid"
               referrerPolicy="no-referrer"
               className="w-9 h-9 rounded-xl object-cover bg-black border border-white/20 shadow-md shadow-black/80 shrink-0"
               onError={(e) => {
@@ -57,7 +57,7 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
             />
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="font-extrabold tracking-tight text-white text-base">
-                Motoride
+                Bid
               </span>
               <span className="text-[11px] text-emerald-400 font-semibold hidden xs:inline">
                 – Ride & Courier Booking

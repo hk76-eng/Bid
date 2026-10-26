@@ -1,4 +1,3 @@
-import { getSupabase, isSupabaseConfigured } from './supabase';
 import { safeStorage } from './safeStorage';
 import { UserRole, RideTypeCode } from '../types/motoride';
 import { getApiUrl } from '../utils/apiUrl';
@@ -36,16 +35,14 @@ export function generateUUID(): string {
 }
 
 /**
- * Ensures user is completely synced to Supabase (profiles, passengers, captains, vehicles, wallets)
+ * Ensures user is cached locally and safely stored
  */
 export async function syncUserToSupabase(user: AuthUser): Promise<{ success: boolean; error?: string }> {
-  const supabase = getSupabase();
   const cleanEmail = user.email.toLowerCase().trim();
-  const cleanName = cleanEmail === 'mojobiketaxi@gmail.com' ? 'Hemant kashyap' : ((user.name || '').trim() || 'MotoRide User');
+  const cleanName = cleanEmail === 'mojobiketaxi@gmail.com' ? 'Hemant kashyap' : ((user.name || '').trim() || 'Bid User');
   const validProfileId = user.id || generateUUID();
   const avatarToSave = user.avatarUrl || safeStorage.getItem(`motoride_${user.role}_avatar`) || null;
 
-  // Local storage profile fallback cache so profiles never get lost
   try {
     const rawCache = safeStorage.getItem('motoride_supa_profiles');
     const profilesCache = rawCache ? JSON.parse(rawCache) : [];
@@ -67,220 +64,15 @@ export async function syncUserToSupabase(user: AuthUser): Promise<{ success: boo
     safeStorage.setItem('motoride_supa_profiles', JSON.stringify(profilesCache));
   } catch {}
 
-  if (!supabase || !isSupabaseConfigured()) {
-    return { success: true, error: 'Supabase not configured' };
-  }
-
-  try {
-    // 1. Check existing profile by ID or Email
-    let existingProfile: any = null;
-    if (validProfileId) {
-      const { data: pById } = await supabase.from('profiles').select('id, wallet_balance').eq('id', validProfileId).maybeSingle();
-      if (pById) existingProfile = pById;
-    }
-    if (!existingProfile && cleanEmail) {
-      const { data: pByEmail } = await supabase.from('profiles').select('id, wallet_balance').eq('email', cleanEmail).maybeSingle();
-      if (pByEmail) existingProfile = pByEmail;
-    }
-
-    const actualProfileId = existingProfile?.id || validProfileId;
-    const existingDbBal = existingProfile?.wallet_balance;
-    const finalBalToSync = typeof existingDbBal === 'number'
-      ? (typeof user.walletBalance === 'number' && user.walletBalance < existingDbBal ? user.walletBalance : existingDbBal)
-      : (user.walletBalance ?? (user.role === 'captain' ? 500 : 200));
-
-    const profilePayload = {
-      id: actualProfileId,
-      email: cleanEmail,
-      full_name: cleanName,
-      phone: user.phone?.trim() || null,
-      role: user.role,
-      avatar_url: avatarToSave,
-      vehicle_model: user.vehicleModel?.trim() || null,
-      plate_number: user.plateNumber?.trim() || null,
-      vehicle_type: user.vehicleType || (user.role === 'captain' ? 'bike' : null),
-      wallet_balance: finalBalToSync,
-      is_active: true,
-      updated_at: new Date().toISOString(),
-    };
-
-    if (existingProfile) {
-      await supabase.from('profiles').update(profilePayload).eq('id', actualProfileId);
-      if (cleanEmail) {
-        await supabase.from('profiles').update(profilePayload).eq('email', cleanEmail);
-      }
-    } else {
-      await supabase.from('profiles').upsert([profilePayload]);
-    }
-
-    // 2. If passenger, insert/update in public.passengers
-    if (user.role === 'passenger') {
-      const { data: existingPass } = await supabase
-        .from('passengers')
-        .select('id')
-        .eq('profile_id', actualProfileId)
-        .maybeSingle();
-
-      if (existingPass) {
-        await supabase
-          .from('passengers')
-          .update({
-            emergency_contact: user.phone?.trim() || null,
-          })
-          .eq('id', existingPass.id);
-      } else {
-        await supabase.from('passengers').insert([
-          {
-            id: `psg_${actualProfileId}`,
-            profile_id: actualProfileId,
-            total_rides: 0,
-            rating: 5.0,
-            emergency_contact: user.phone?.trim() || null,
-          },
-        ]);
-      }
-    }
-
-    // 3. If captain, ensure row exists in public.captains and public.vehicles
-    if (user.role === 'captain') {
-      const { data: existingCpt } = await supabase
-        .from('captains')
-        .select('id, profile_id')
-        .eq('profile_id', actualProfileId)
-        .maybeSingle();
-
-      let actualCaptainId = existingCpt?.id;
-
-      if (!existingCpt) {
-        const captainId = generateUUID();
-        let initialLat = 30.7046;
-        let initialLng = 76.7178;
-        try {
-          const lastGps = localStorage.getItem('motoride_last_captain_gps') || localStorage.getItem('motoride_last_passenger_gps');
-          if (lastGps) {
-            const parsed = JSON.parse(lastGps);
-            if (parsed.lat && parsed.lng) {
-              initialLat = parsed.lat;
-              initialLng = parsed.lng;
-            }
-          }
-        } catch {}
-
-        const { data: newCpt, error: cptErr } = await supabase
-          .from('captains')
-          .insert([
-            {
-              id: captainId,
-              profile_id: actualProfileId,
-              avatar_url: avatarToSave,
-              is_online: true,
-              is_approved: true,
-              is_active: true,
-              current_lat: initialLat,
-              current_lng: initialLng,
-              rating: 4.9,
-              total_rides: 0,
-              today_earnings: 0,
-              total_earnings: 0,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            },
-          ])
-          .select('id')
-          .maybeSingle();
-
-        actualCaptainId = newCpt?.id || captainId;
-        try {
-          localStorage.setItem('motoride_captain_id', actualCaptainId);
-        } catch {}
-        if (cptErr) {
-          console.warn('Supabase captain insert warning:', cptErr.message);
-        }
-      } else {
-        actualCaptainId = existingCpt.id;
-        try {
-          localStorage.setItem('motoride_captain_id', actualCaptainId);
-        } catch {}
-        if (avatarToSave) {
-          await supabase.from('captains').update({ avatar_url: avatarToSave }).eq('id', existingCpt.id);
-        }
-      }
-
-      if (actualCaptainId) {
-        const plateNo =
-          user.plateNumber?.trim() ||
-          `PB${Math.floor(10 + Math.random() * 89)}AB${Math.floor(1000 + Math.random() * 9000)}`;
-
-        const { data: existingVeh } = await supabase
-          .from('vehicles')
-          .select('id')
-          .or(`captain_id.eq.${actualCaptainId},captain_id.eq.${actualProfileId},captain_id.eq.${user.id}`)
-          .maybeSingle();
-
-        if (existingVeh) {
-          await supabase
-            .from('vehicles')
-            .update({
-              captain_id: actualProfileId,
-              model: user.vehicleModel?.trim() || 'Motorcycle',
-              plate_number: plateNo,
-              vehicle_type: user.vehicleType || 'bike',
-            })
-            .eq('id', existingVeh.id);
-        } else {
-          await supabase.from('vehicles').insert([
-            {
-              id: generateUUID(),
-              captain_id: actualProfileId,
-              model: user.vehicleModel?.trim() || 'Motorcycle',
-              plate_number: plateNo,
-              vehicle_type: user.vehicleType || 'bike',
-              color: 'Black',
-              is_active: true,
-              created_at: new Date().toISOString(),
-            },
-          ]);
-        }
-      }
-    }
-
-    // 4. Upsert into public.wallets
-    const { data: existingWal } = await supabase
-      .from('wallets')
-      .select('id, balance')
-      .eq('user_id', actualProfileId)
-      .maybeSingle();
-
-    if (!existingWal) {
-      await supabase.from('wallets').insert([
-        {
-          id: generateUUID(),
-          user_id: actualProfileId,
-          role: user.role,
-          balance: finalBalToSync,
-          currency: '₹',
-        },
-      ]);
-    }
-
-    return { success: true };
-  } catch (err: any) {
-    console.warn('Supabase sync error:', err);
-    return { success: false, error: err.message || 'Supabase sync failed' };
-  }
+  return { success: true };
 }
 
 /**
- * Synchronize all registered accounts from local storage to Supabase
+ * Synchronize all registered accounts (local stub for backward compatibility)
  */
 export async function syncAllAccountsToSupabase(): Promise<{ synced: number; total: number; error?: string }> {
   const accounts = supabaseAuth.getRegisteredAccounts();
-  let count = 0;
-  for (const acc of accounts) {
-    const res = await syncUserToSupabase(acc);
-    if (res.success) count++;
-  }
-  return { synced: count, total: accounts.length };
+  return { synced: accounts.length, total: accounts.length };
 }
 
 export function isDemoAccount(acc: any): boolean {
@@ -435,7 +227,7 @@ export const supabaseAuth = {
   },
 
   /**
-   * Save a newly registered account locally and ensure Supabase synchronization
+   * Save a newly registered account locally and ensure backend server synchronization
    */
   saveAccount(account: StoredAccount) {
     try {
@@ -489,7 +281,7 @@ export const supabaseAuth = {
         fetch(getApiUrl('/api/motoride/auth/register'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          keepalive: true, // Ensures request is completed even if page transition or redirect occurs immediately
+          keepalive: true,
           body: JSON.stringify({
             id: accountToSave.id,
             email: accountToSave.email,
@@ -506,10 +298,8 @@ export const supabaseAuth = {
         });
       } catch {}
 
-      // Asynchronously ensure synced into Supabase profiles/passengers/captains
-      syncUserToSupabase(accountToSave).catch((err) => {
-        console.warn('Background Supabase user sync notice:', err);
-      });
+      // Cache locally
+      syncUserToSupabase(accountToSave).catch(() => {});
 
       // Notify other tabs immediately of the new account registration via local BroadcastChannel
       if (typeof window !== 'undefined' && window.BroadcastChannel) {
@@ -572,7 +362,7 @@ export const supabaseAuth = {
   },
 
   /**
-   * Get current stored auth user from localStorage or Supabase
+   * Get current stored auth user from localStorage session
    */
   getCurrentUser(): AuthUser | null {
     try {
@@ -636,7 +426,7 @@ export const supabaseAuth = {
   },
 
   /**
-   * Sign In via Supabase Auth + Profiles Role Validation
+   * Sign In via Credentials + Account Validation
    */
   async signIn(params: {
     email: string;
@@ -671,184 +461,31 @@ export const supabaseAuth = {
       }
     } catch {}
 
-    // 2. Authenticate with Supabase Auth (Primary Source of Truth)
-    const supabase = getSupabase();
-    let authUserId: string | null = null;
-    let authUserObj: any = null;
+    // 2. Validate against local registered accounts
+    const accounts = this.getRegisteredAccounts();
+    const match = accounts.find((a) => a.email.toLowerCase() === cleanEmail);
 
-    if (supabase && isSupabaseConfigured()) {
-      const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password: cleanPass,
-      });
-
-      if (authErr) {
-        // Check if user profile already exists in public.profiles table
-        const { data: existingProf } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('email', cleanEmail)
-          .maybeSingle();
-
-        if (existingProf) {
-          // Attempt sign up to establish Supabase Auth user record for existing profile
-          const { data: newAuthData } = await supabase.auth.signUp({
-            email: cleanEmail,
-            password: cleanPass,
-            options: {
-              data: { name: existingProf.full_name || cleanEmail.split('@')[0], role: existingProf.role },
-            },
-          });
-          if (newAuthData?.user) {
-            authUserObj = newAuthData.user;
-            authUserId = newAuthData.user.id;
-            await supabase.from('profiles').update({ id: newAuthData.user.id, updated_at: new Date().toISOString() }).eq('email', cleanEmail);
-          } else {
-            // Profile exists on Supabase! Authenticate using profile id
-            authUserId = existingProf.id;
-          }
-        } else {
-          // Check if account exists in local storage cache
-          const accounts = this.getRegisteredAccounts();
-          const match = accounts.find((a) => a.email.toLowerCase() === cleanEmail);
-          
-          if (match) {
-            if (match.passwordHash === cleanPass || cleanPass.length >= 4) {
-              // Attempt to register/sync on Supabase Auth
-              const { data: newAuthData } = await supabase.auth.signUp({
-                email: cleanEmail,
-                password: cleanPass,
-                options: {
-                  data: { name: match.name || cleanEmail.split('@')[0], role: match.role },
-                },
-              });
-              authUserId = newAuthData?.user?.id || match.id;
-              authUserObj = newAuthData?.user;
-            } else {
-              return { user: null as any, error: 'Incorrect password. Please verify your credentials.' };
-            }
-          } else {
-            // Register account smoothly on demand so user is never blocked
-            const newId = generateUUID();
-            const { data: newAuthData } = await supabase.auth.signUp({
-              email: cleanEmail,
-              password: cleanPass,
-              options: {
-                data: { name: cleanEmail.split('@')[0], role: targetRole },
-              },
-            });
-            authUserId = newAuthData?.user?.id || newId;
-            authUserObj = newAuthData?.user;
-          }
-        }
-      } else {
-        authUserObj = authData.user;
-        authUserId = authData.user.id;
-      }
-    }
-
-    // Fallback if Supabase client unavailable
-    if (!authUserId) {
-      const accounts = this.getRegisteredAccounts();
-      const match = accounts.find((a) => a.email.toLowerCase() === cleanEmail);
-      if (match) {
-        if (match.role !== targetRole) {
-          if (targetRole === 'passenger') {
-            if (match.role === 'captain') return { user: null as any, error: 'This account is registered as a Captain. Please use Captain Login.' };
-            if (match.role === 'admin') return { user: null as any, error: 'This account is registered as an Admin. Please use Admin Login.' };
-          } else if (targetRole === 'captain') {
-            if (match.role === 'passenger') return { user: null as any, error: 'This account is registered as a Passenger. Please use Passenger Login.' };
-            if (match.role === 'admin') return { user: null as any, error: 'This account is registered as an Admin. Please use Admin Login.' };
-          } else if (targetRole === 'admin') {
-            return { user: null as any, error: `Access denied. This account is registered as a ${match.role}.` };
-          }
-        }
-        if (match.passwordHash !== cleanPass) {
-          return { user: null as any, error: 'Incorrect password. Please verify your credentials.' };
-        }
-        authUserId = match.id;
-      } else {
-        authUserId = generateUUID();
-      }
-    }
-
-    // 3. Retrieve user profile from secure profiles table using the authenticated user ID
-    let profile: any = null;
-    if (supabase && isSupabaseConfigured() && authUserId) {
-      const { data: pById } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', authUserId)
-        .maybeSingle();
-
-      if (pById) {
-        profile = pById;
-      } else {
-        // Look up by email
-        const { data: pByEmail } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('email', cleanEmail)
-          .maybeSingle();
-
-        if (pByEmail) {
-          profile = pByEmail;
-          await supabase.from('profiles').update({ id: authUserId }).eq('id', pByEmail.id);
-        } else {
-          // Create new profile row linked to authUserId
-          const newProfilePayload = {
-            id: authUserId,
-            email: cleanEmail,
-            full_name: authUserObj?.user_metadata?.name || cleanEmail.split('@')[0],
-            role: targetRole,
-            wallet_balance: targetRole === 'captain' ? 500 : 200,
-            is_active: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          };
-          await supabase.from('profiles').upsert([newProfilePayload]);
-          profile = newProfilePayload;
+    if (match) {
+      if (match.role !== targetRole) {
+        if (targetRole === 'passenger') {
+          if (match.role === 'captain') return { user: null as any, error: 'This account is registered as a Captain. Please use Captain Login.' };
+          if (match.role === 'admin') return { user: null as any, error: 'This account is registered as an Admin. Please use Admin Login.' };
+        } else if (targetRole === 'captain') {
+          if (match.role === 'passenger') return { user: null as any, error: 'This account is registered as a Passenger. Please use Passenger Login.' };
+          if (match.role === 'admin') return { user: null as any, error: 'This account is registered as an Admin. Please use Admin Login.' };
+        } else if (targetRole === 'admin') {
+          return { user: null as any, error: `Access denied. This account is registered as a ${match.role}.` };
         }
       }
+      if (match.passwordHash && match.passwordHash !== cleanPass && cleanPass.length >= 4) {
+        // If password does not match
+        return { user: null as any, error: 'Incorrect password. Please verify your credentials.' };
+      }
     }
 
-    if (!profile) {
-      const accounts = this.getRegisteredAccounts();
-      const match = accounts.find((a) => a.email.toLowerCase() === cleanEmail);
-      profile = match || {
-        id: authUserId,
-        email: cleanEmail,
-        full_name: cleanEmail.split('@')[0],
-        role: targetRole,
-      };
-    }
+    const authUserId = match?.id || generateUUID();
+    const actualRole: UserRole = match?.role || targetRole;
 
-    const actualRole: UserRole = profile.role || 'passenger';
-
-    // 4. STRICT ROLE AUTHORIZATION CHECK PER LOGIN PORTAL
-    if (actualRole !== targetRole) {
-      if (supabase && isSupabaseConfigured()) {
-        await supabase.auth.signOut();
-      }
-      this.setCurrentUser(null);
-
-      if (targetRole === 'passenger') {
-        if (actualRole === 'captain') return { user: null as any, error: 'This account is registered as a Captain. Please use Captain Login.' };
-        if (actualRole === 'admin') return { user: null as any, error: 'This account is registered as an Admin. Please use Admin Login.' };
-      }
-      if (targetRole === 'captain') {
-        if (actualRole === 'passenger') return { user: null as any, error: 'This account is registered as a Passenger. Please use Passenger Login.' };
-        if (actualRole === 'admin') return { user: null as any, error: 'This account is registered as an Admin. Please use Admin Login.' };
-      }
-      if (targetRole === 'admin') {
-        if (actualRole === 'passenger') return { user: null as any, error: 'Access denied. This account is registered as a Passenger. Please use Passenger Login.' };
-        if (actualRole === 'captain') return { user: null as any, error: 'Access denied. This account is registered as a Captain. Please use Captain Login.' };
-      }
-
-      return { user: null as any, error: `This account is registered as a ${actualRole}. Please use the correct login portal.` };
-    }
-
-    // Role matches portal! Access Granted.
     const storedCaptainBal = safeStorage.getItem('motoride_captain_wallet_balance');
     const fallbackBal = actualRole === 'captain'
       ? (storedCaptainBal && !isNaN(Number(storedCaptainBal)) ? Number(storedCaptainBal) : 500)
@@ -857,26 +494,25 @@ export const supabaseAuth = {
     const isMojobiketaxiCaptain = cleanEmail === 'mojobiketaxi@gmail.com';
     const authUser: AuthUser = {
       id: isMojobiketaxiCaptain ? 'cpt_mojobiketaxi' : authUserId,
-      email: isMojobiketaxiCaptain ? 'mojobiketaxi@gmail.com' : (profile.email || cleanEmail),
-      name: isMojobiketaxiCaptain ? 'Hemant kashyap' : (profile.full_name || 'MotoRide User'),
+      email: isMojobiketaxiCaptain ? 'mojobiketaxi@gmail.com' : cleanEmail,
+      name: isMojobiketaxiCaptain ? 'Hemant kashyap' : (match?.name || cleanEmail.split('@')[0]),
       role: isMojobiketaxiCaptain ? 'captain' : actualRole,
-      phone: isMojobiketaxiCaptain ? '+91 9876543210' : (profile.phone || ''),
-      avatarUrl: profile.avatar_url || null,
-      vehicleModel: isMojobiketaxiCaptain ? 'Honda Activa 6G' : (profile.vehicle_model || ''),
-      plateNumber: isMojobiketaxiCaptain ? 'PB65AX9922' : (profile.plate_number || ''),
-      vehicleType: isMojobiketaxiCaptain ? 'bike' : (profile.vehicle_type || 'bike'),
-      walletBalance: profile.wallet_balance ?? fallbackBal,
-      memberSince: isMojobiketaxiCaptain ? '2024-01-01T00:00:00.000Z' : (profile.created_at || new Date().toISOString()),
+      phone: isMojobiketaxiCaptain ? '+91 9876543210' : (match?.phone || ''),
+      avatarUrl: match?.avatarUrl || null,
+      vehicleModel: isMojobiketaxiCaptain ? 'Honda Activa 6G' : (match?.vehicleModel || ''),
+      plateNumber: isMojobiketaxiCaptain ? 'PB65AX9922' : (match?.plateNumber || ''),
+      vehicleType: isMojobiketaxiCaptain ? 'bike' : (match?.vehicleType || 'bike'),
+      walletBalance: match?.walletBalance ?? fallbackBal,
+      memberSince: isMojobiketaxiCaptain ? '2024-01-01T00:00:00.000Z' : (match?.memberSince || new Date().toISOString()),
     };
 
-    await syncUserToSupabase(authUser);
     this.saveAccount({ ...authUser, passwordHash: cleanPass });
     this.setCurrentUser(authUser);
     return { user: authUser };
   },
 
   /**
-   * Sign Up: Register a fresh Account via Supabase Auth
+   * Sign Up: Register a fresh Account
    */
   async signUp(params: {
     email: string;
@@ -907,78 +543,15 @@ export const supabaseAuth = {
       return { user: null as any, error: 'Full name is required.' };
     }
 
-    const supabase = getSupabase();
-
-    if (supabase && isSupabaseConfigured()) {
-      // Check if profile with email already exists
-      const { data: existingProf } = await supabase
-        .from('profiles')
-        .select('email, role')
-        .eq('email', cleanEmail)
-        .maybeSingle();
-
-      if (existingProf) {
-        return {
-          user: null as any,
-          error: `An account with email "${cleanEmail}" is already registered as a ${existingProf.role}. Please sign in to your account.`,
-        };
-      }
-
-      // Register with Supabase Auth
-      const { data: authData, error: authErr } = await supabase.auth.signUp({
-        email: cleanEmail,
-        password: cleanPass,
-        options: {
-          data: {
-            name: cleanName,
-            role: cleanRole,
-          },
-        },
-      });
-
-      if (authErr) {
-        return { user: null as any, error: authErr.message };
-      }
-
-      const authUserId = authData.user?.id || generateUUID();
-
-      const profilePayload = {
-        id: authUserId,
-        email: cleanEmail,
-        full_name: cleanName,
-        phone: params.phone?.trim() || null,
-        role: cleanRole,
-        wallet_balance: cleanRole === 'captain' ? 500 : 200,
-        vehicle_model: cleanRole === 'captain' ? (params.vehicleModel?.trim() || 'Motorcycle') : null,
-        plate_number: cleanRole === 'captain' ? (params.plateNumber?.trim() || '') : null,
-        vehicle_type: cleanRole === 'captain' ? (params.vehicleType || 'bike') : null,
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+    const accounts = this.getRegisteredAccounts();
+    const existing = accounts.find((a) => a.email.toLowerCase() === cleanEmail);
+    if (existing) {
+      return {
+        user: null as any,
+        error: `An account with email "${cleanEmail}" is already registered as a ${existing.role}. Please sign in to your account.`,
       };
-
-      await supabase.from('profiles').upsert([profilePayload]);
-
-      const authUser: AuthUser = {
-        id: authUserId,
-        email: cleanEmail,
-        name: cleanName,
-        role: cleanRole,
-        phone: params.phone?.trim() || '',
-        vehicleModel: params.vehicleModel?.trim() || '',
-        plateNumber: params.plateNumber?.trim() || '',
-        vehicleType: params.vehicleType || 'bike',
-        walletBalance: cleanRole === 'captain' ? 500 : 200,
-        memberSince: new Date().toISOString(),
-      };
-
-      await syncUserToSupabase(authUser);
-      this.saveAccount({ ...authUser, passwordHash: cleanPass });
-      this.setCurrentUser(authUser);
-      return { user: authUser };
     }
 
-    // Fallback if local
     const userId = generateUUID();
     const authUser: AuthUser = {
       id: userId,
@@ -999,99 +572,13 @@ export const supabaseAuth = {
   },
 
   async getSessionUser(): Promise<AuthUser | null> {
-    const cachedUser = this.getCurrentUser();
-
-    const supabase = getSupabase();
-    if (!supabase || !isSupabaseConfigured()) {
-      return cachedUser;
-    }
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session && session.user) {
-        const authUserId = session.user.id;
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', authUserId)
-          .maybeSingle();
-
-        if (profile) {
-          const storedCaptainBal = safeStorage.getItem('motoride_captain_wallet_balance');
-          const fallbackBal = profile.role === 'captain'
-            ? (storedCaptainBal && !isNaN(Number(storedCaptainBal)) ? Number(storedCaptainBal) : 500)
-            : 200;
-
-          const userEmail = (profile.email || session.user.email || '').toLowerCase().trim();
-          const isMojo = userEmail === 'mojobiketaxi@gmail.com';
-          const authUser: AuthUser = {
-            id: isMojo ? 'cpt_mojobiketaxi' : authUserId,
-            email: isMojo ? 'mojobiketaxi@gmail.com' : (profile.email || session.user.email || ''),
-            name: isMojo ? 'Hemant kashyap' : (profile.full_name || session.user.user_metadata?.name || 'MotoRide User'),
-            role: isMojo ? 'captain' : profile.role,
-            phone: isMojo ? '+91 9876543210' : (profile.phone || ''),
-            avatarUrl: profile.avatar_url || cachedUser?.avatarUrl || null,
-            vehicleModel: isMojo ? 'Honda Activa 6G' : (profile.vehicle_model || ''),
-            plateNumber: isMojo ? 'PB65AX9922' : (profile.plate_number || ''),
-            vehicleType: isMojo ? 'bike' : (profile.vehicle_type || 'bike'),
-            walletBalance: profile.wallet_balance ?? fallbackBal,
-            memberSince: isMojo ? '2024-01-01T00:00:00.000Z' : (profile.created_at || new Date().toISOString()),
-          };
-
-          this.setCurrentUser(authUser);
-          return authUser;
-        }
-      }
-
-      // If Supabase Auth session is not active or timed out, but a valid signed-in user exists in storage cache,
-      // preserve the signed-in session so the user (Passenger, Captain, or Admin) is NOT automatically signed out on page refresh!
-      if (cachedUser) {
-        try {
-          const cleanEmail = cachedUser.email?.toLowerCase().trim();
-          if (cleanEmail) {
-            const { data: pByEmail } = await supabase
-              .from('profiles')
-              .select('*')
-              .or(`id.eq.${cachedUser.id},email.eq.${cleanEmail}`)
-              .maybeSingle();
-
-            if (pByEmail) {
-              const refreshedUser: AuthUser = {
-                ...cachedUser,
-                name: pByEmail.full_name || cachedUser.name,
-                role: pByEmail.role || cachedUser.role,
-                phone: pByEmail.phone || cachedUser.phone,
-                avatarUrl: pByEmail.avatar_url || cachedUser.avatarUrl,
-                walletBalance: pByEmail.wallet_balance ?? cachedUser.walletBalance,
-              };
-              this.setCurrentUser(refreshedUser);
-              return refreshedUser;
-            }
-          }
-        } catch {}
-
-        return cachedUser;
-      }
-
-      return null;
-    } catch {
-      return cachedUser;
-    }
+    return this.getCurrentUser();
   },
 
   /**
    * Sign Out
    */
   async signOut(): Promise<void> {
-    const supabase = getSupabase();
-    if (supabase && isSupabaseConfigured()) {
-      try {
-        await supabase.auth.signOut();
-      } catch (err) {
-        console.warn('Supabase signOut error:', err);
-      }
-    }
     this.setCurrentUser(null);
   },
 };
-

@@ -187,7 +187,7 @@ export const subscribeAppwriteRealtime = (
       } else if (!allowed) {
         const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
         console.info(
-          `[Appwrite Notice] Host '${hostname}' is not yet registered in Appwrite Console > Web Platforms. Direct WebSocket is bypassed to prevent reconnection errors. Real-time synchronization is fully supported via Supabase Realtime & Backend SSE.`
+          `[Appwrite Notice] Host '${hostname}' is not yet registered in Appwrite Console > Web Platforms. Direct WebSocket is bypassed to prevent reconnection errors. Real-time synchronization is fully supported via Local Realtime & Backend SSE.`
         );
       }
     }).catch(() => {});

@@ -48,59 +48,10 @@ export {
 
 export { isAppwriteConfigured, syncRideToAppwrite, APPWRITE_CONFIG_STATUS };
 
-export const SUPABASE_RIDES_COLUMNS = new Set([
-  'id',
-  'ride_code',
-  'passenger_id',
-  'passenger_name',
-  'passenger_phone',
-  'passenger_avatar',
-  'passenger_rating',
-  'passenger_total_rides',
-  'captain_id',
-  'captain_name',
-  'captain_phone',
-  'captain_avatar',
-  'captain_heading',
-  'vehicle_model',
-  'plate_number',
-  'pickup_address',
-  'pickup_lat',
-  'pickup_lng',
-  'dropoff_address',
-  'dropoff_lat',
-  'dropoff_lng',
-  'distance_km',
-  'duration_minutes',
-  'estimated_fare',
-  'offered_fare',
-  'final_fare',
-  'ride_type',
-  'status',
-  'payment_method',
-  'payment_status',
-  'cancellation_reason',
-  'trip_started_at',
-  'trip_completed_at',
-  'captain_current_lat',
-  'captain_current_lng',
-  'offers',
-  'declined_captain_ids',
-  'comment',
-  'notes',
-  'created_at',
-  'updated_at',
-  'completed_at',
-]);
+export const SUPABASE_RIDES_COLUMNS = new Set<string>();
 
 export function sanitizeForSupabaseRides(data: Record<string, any>): Record<string, any> {
-  const result: Record<string, any> = {};
-  for (const [key, value] of Object.entries(data)) {
-    if (SUPABASE_RIDES_COLUMNS.has(key) && value !== undefined) {
-      result[key] = value;
-    }
-  }
-  return result;
+  return { ...data };
 }
 
 export function getRideAgreedFare(ride: MotorideRide | null | undefined): number {
@@ -752,21 +703,7 @@ export const motorideApi = {
       console.warn('Backend ride create warning:', err);
     }
 
-    // 4. Post to Supabase database (sanitized with all required NOT NULL columns)
-    const supabase = getSupabase();
-    if (supabase) {
-      try {
-        const sbPayload = sanitizeForSupabaseRides(payload);
-        const { error: insertErr } = await supabase.from('rides').upsert([sbPayload], { onConflict: 'id' });
-        if (insertErr) {
-          console.warn('Supabase upsert ride warning:', insertErr);
-        }
-      } catch (err) {
-        console.warn('Supabase upsert ride notice:', err);
-      }
-    }
-
-    // 5. Post to Appwrite database (https://motoride.appwrite.network/)
+    // 4. Post to Appwrite database (https://motoride.appwrite.network/)
     if (isAppwriteConfigured()) {
       syncRideToAppwrite(payload).catch((err) => {
         console.warn('Appwrite sync ride notice:', err);
@@ -794,24 +731,6 @@ export const motorideApi = {
     const nowIso = new Date().toISOString();
     const agreedFare = Number(captainData.accepted_fare || existing.final_fare || 75);
 
-    // 1. Verify in Supabase first: make sure ride is not already accepted by another captain
-    const supabase = getSupabase();
-    if (supabase && isSupabaseConfigured()) {
-      try {
-        const { data: dbRide, error: fetchErr } = await supabase.from('rides').select('*').eq('id', rideId).single();
-        if (!fetchErr && dbRide) {
-          const canonicalDbStatus = toCanonicalStatus(dbRide.status);
-          if (canonicalDbStatus !== 'requested' && dbRide.captain_id && dbRide.captain_id !== captainData.captain_id) {
-            throw new Error('This ride was already accepted by another captain.');
-          }
-        }
-      } catch (checkErr: any) {
-        if (checkErr.message?.includes('already accepted')) {
-          throw checkErr;
-        }
-      }
-    }
-
     const updatedRide: MotorideRide = {
       ...existing,
       id: rideId,
@@ -830,42 +749,6 @@ export const motorideApi = {
       fare_amount: agreedFare,
       updated_at: nowIso,
     };
-
-    // 2. Atomically save status change to Supabase database BEFORE confirming
-    if (supabase && isSupabaseConfigured()) {
-      try {
-        const updatePayload = {
-          captain_id: captainData.captain_id,
-          captain_name: captainData.captain_name,
-          captain_avatar: updatedRide.captain_avatar,
-          captain_phone: captainData.captain_phone,
-          vehicle_model: captainData.vehicle_model,
-          plate_number: captainData.plate_number,
-          final_fare: agreedFare,
-          fare_amount: agreedFare,
-          status: 'accepted',
-          updated_at: nowIso,
-        };
-
-        const { data: confirmedDb, error: sbErr } = await supabase
-          .from('rides')
-          .update(sanitizeForSupabaseRides(updatePayload))
-          .eq('id', rideId)
-          .select()
-          .single();
-
-        if (sbErr) {
-          console.warn(`[Motoride Database] Notice updating ride ${rideId} in Supabase:`, sbErr);
-        }
-
-        if (confirmedDb) {
-          Object.assign(updatedRide, confirmedDb);
-          updatedRide.status = 'accepted';
-        }
-      } catch (sbEx) {
-        console.warn(`[Motoride Database] Supabase connection notice in acceptRide:`, sbEx);
-      }
-    }
 
     // 3. Save confirmed ride to local memory & disk
     localRidesStore.set(rideId, updatedRide);
@@ -932,28 +815,6 @@ export const motorideApi = {
     localRidesStore.set(rideId, updatedRide);
     saveLocalRides();
 
-    const supabase = getSupabase();
-    if (supabase) {
-      try {
-        const updatePayload = {
-          status: 'captain_offered',
-          offers: updatedRide.offers,
-          final_fare: Number(offerData.counter_fare),
-          offered_fare: updatedRide.offered_fare,
-          updated_at: updatedRide.updated_at,
-        };
-        const { error: sbErr } = await supabase
-          .from('rides')
-          .update(sanitizeForSupabaseRides(updatePayload))
-          .eq('id', rideId);
-        if (sbErr) {
-          console.warn('Supabase counter offer error:', sbErr);
-        }
-      } catch (err) {
-        console.warn('Supabase counter offer notice:', err);
-      }
-    }
-
     const serverResult = await safeFetchJson<{ ride: MotorideRide; offer: RideOffer }>(
       `${API_BASE}/rides/${rideId}/offer`,
       {
@@ -1012,28 +873,6 @@ export const motorideApi = {
     realtimeSync.broadcast('RIDE_ACCEPTED', updatedRide);
     realtimeSync.broadcast('RIDE_STATUS_CHANGED', { ride: updatedRide, status: 'accepted' });
     realtimeSync.broadcast('RIDE_UPDATED', updatedRide);
-
-    const supabase = getSupabase();
-    if (supabase) {
-      try {
-        const updatePayload = {
-          status: 'accepted',
-          captain_id: updatedRide.captain_id,
-          captain_name: updatedRide.captain_name,
-          captain_avatar: (updatedRide as any).captain_avatar,
-          captain_phone: updatedRide.captain_phone,
-          vehicle_model: updatedRide.vehicle_model,
-          plate_number: updatedRide.plate_number,
-          final_fare: agreedFare,
-          offered_fare: agreedFare,
-          offers: updatedRide.offers,
-          updated_at: updatedRide.updated_at,
-        };
-        await supabase.from('rides').update(sanitizeForSupabaseRides(updatePayload)).eq('id', rideId);
-      } catch (err) {
-        console.warn('Supabase accept counter offer notice:', err);
-      }
-    }
 
     const serverRes = await safeFetchJson<{ ride: MotorideRide }>(
       `${API_BASE}/rides/${rideId}/accept-offer`,
@@ -1187,24 +1026,8 @@ export const motorideApi = {
     }
   ): Promise<MotorideRide> {
     const canonicalStatus = toCanonicalStatus(status);
-    const supabase = getSupabase();
 
-    // 1. Fetch latest state from Supabase as single source of truth
     let existing = localRidesStore.get(rideId) || extra?.ride;
-    if (supabase && isSupabaseConfigured()) {
-      try {
-        const { data: dbRide, error: fetchErr } = await supabase
-          .from('rides')
-          .select('*')
-          .eq('id', rideId)
-          .single();
-        if (!fetchErr && dbRide) {
-          existing = resolveAuthoritativeRide(existing, dbRide as MotorideRide);
-        }
-      } catch (checkErr) {
-        console.warn(`[Motoride Database] Status pre-check notice for ride ${rideId}:`, checkErr);
-      }
-    }
     if (!existing) {
       existing = { id: rideId, status: 'requested' } as MotorideRide;
     }
@@ -1280,31 +1103,7 @@ export const motorideApi = {
       updated_at: nowIso,
     };
 
-    // 3. Atomically update Supabase database as authoritative record
-    if (supabase && isSupabaseConfigured()) {
-      try {
-        const sanitized = sanitizeForSupabaseRides(updatePayload);
-        const { data: updatedDb, error: sbErr } = await supabase
-          .from('rides')
-          .update(sanitized)
-          .eq('id', rideId)
-          .select()
-          .single();
-
-        if (sbErr) {
-          console.warn(`[Motoride Database] Notice updating ride ${rideId} to "${canonicalStatus}" in Supabase:`, sbErr);
-        }
-
-        if (updatedDb) {
-          confirmedRide = resolveAuthoritativeRide(confirmedRide, updatedDb as MotorideRide);
-          confirmedRide.status = canonicalStatus;
-        }
-      } catch (sbEx) {
-        console.warn(`[Motoride Database] Supabase connection notice in updateRideStatus:`, sbEx);
-      }
-    }
-
-    // 4. Update local memory and persist to disk
+    // 3. Update local memory and persist to disk
     localRidesStore.set(rideId, confirmedRide);
     saveLocalRides();
 
@@ -3521,153 +3320,9 @@ export const motorideApi = {
       }
     } catch {}
 
-    // 3. Direct Supabase cloud database query with safe, isolated try-catch blocks
-    const supabase = getSupabase();
-    let supabaseBal: number | null = null;
-    let supabaseTxs: WalletTransaction[] = [];
-
-    if (supabase) {
-      const sessionUser = supabaseAuth.getCurrentUser();
-      const rawUserPhone = userPhone?.replace(/\D/g, '').slice(-10);
-      const rawSessionPhone = sessionUser?.phone?.replace(/\D/g, '').slice(-10);
-      const idsToTry = Array.from(new Set([
-        userId,
-        userPhone,
-        rawUserPhone,
-        rawUserPhone ? `+91${rawUserPhone}` : '',
-        rawUserPhone ? `91${rawUserPhone}` : '',
-        sessionUser?.id,
-        sessionUser?.phone,
-        rawSessionPhone,
-        rawSessionPhone ? `+91${rawSessionPhone}` : '',
-        'cpt_01',
-        'cpt_instant_01',
-      ].filter(Boolean) as string[]));
-
-      // A. Query profiles table
-      try {
-        if (userId) {
-          const { data: pById } = await supabase.from('profiles').select('id, phone, email, wallet_balance').eq('id', userId).maybeSingle();
-          if (pById && typeof pById.wallet_balance === 'number') supabaseBal = Number(pById.wallet_balance);
-        }
-        if (supabaseBal === null && idsToTry.length > 0) {
-          const { data: pByPhone } = await supabase.from('profiles').select('id, phone, email, wallet_balance').in('phone', idsToTry).maybeSingle();
-          if (pByPhone && typeof pByPhone.wallet_balance === 'number') supabaseBal = Number(pByPhone.wallet_balance);
-        }
-        if (supabaseBal === null && sessionUser?.email) {
-          const { data: pByEmail } = await supabase.from('profiles').select('id, phone, email, wallet_balance').eq('email', sessionUser.email.toLowerCase().trim()).maybeSingle();
-          if (pByEmail && typeof pByEmail.wallet_balance === 'number') supabaseBal = Number(pByEmail.wallet_balance);
-        }
-      } catch {}
-
-      // B. Query wallet_transactions table
-      try {
-        const { data: txData } = await supabase
-          .from('wallet_transactions')
-          .select('*')
-          .in('user_id', idsToTry)
-          .order('created_at', { ascending: false });
-        if (Array.isArray(txData)) {
-          supabaseTxs = txData;
-        }
-      } catch {}
-
-      // C. Query completed rides table for accurate platform commission calculation
-      try {
-        const { data: allRides } = await supabase
-          .from('rides')
-          .select('*')
-          .in('status', ['completed', 'trip_completed']);
-
-        if (Array.isArray(allRides)) {
-          const matchingRides = allRides.filter((r) =>
-            idsToTry.includes(r.captain_id) || idsToTry.includes(r.captain_phone)
-          );
-
-          for (const r of matchingRides) {
-            const fare = Number(r.final_fare || r.fare_amount || r.accepted_fare || 80);
-            const comm = Number((r.platform_commission || fare * 0.10).toFixed(2));
-            const earn = Number((fare - comm).toFixed(2));
-            const txId = `tx_comm_${r.id}`;
-
-            if (!supabaseTxs.some((t) => t.id === txId || t.reference_ride_id === r.id)) {
-              supabaseTxs.push({
-                id: txId,
-                wallet_id: `w_${userId}`,
-                user_id: userId,
-                amount: comm,
-                type: 'debit',
-                category: 'commission_fee',
-                description: `10% Platform Commission for ${r.ride_type === 'courier' ? 'Delivery' : 'Trip'} #${r.ride_code || r.id.slice(0, 8).toUpperCase()} (Fare: ₹${fare}, Fee: -₹${comm}, Net Take-Home: +₹${earn})`,
-                reference_ride_id: r.id,
-                ride_code: r.ride_code || r.id.slice(0, 8).toUpperCase(),
-                gross_fare: fare,
-                commission_amount: comm,
-                captain_earning: earn,
-                pickup_address: r.pickup_address || 'Pickup Location',
-                dropoff_address: r.dropoff_address || 'Dropoff Location',
-                created_at: r.completed_at || r.updated_at || r.created_at || new Date().toISOString(),
-              });
-            }
-          }
-        }
-      } catch {}
-
-      // D. Query approved topup_requests directly to guarantee any approved screenshot deposit is immediately counted
-      try {
-        const { data: approvedTopups } = await supabase
-          .from('topup_requests')
-          .select('*')
-          .eq('status', 'approved');
-
-        if (Array.isArray(approvedTopups)) {
-          const myTopups = approvedTopups.filter((t) =>
-            idsToTry.includes(t.captain_id) || idsToTry.includes(t.captain_phone)
-          );
-
-          for (const t of myTopups) {
-            const txId = `tx_topup_${t.id}`;
-            const existsInTxs = supabaseTxs.some((st) =>
-              st.id === txId ||
-              st.id === `tx_dep_${t.id}` ||
-              (st.type === 'credit' && st.description?.includes(t.id))
-            );
-
-            if (!existsInTxs) {
-              supabaseTxs.push({
-                id: txId,
-                wallet_id: `w_${userId}`,
-                user_id: userId,
-                amount: Number(t.amount || 100),
-                type: 'credit',
-                category: 'topup',
-                description: `Official QR Top-up Approved (₹${t.amount}${t.utr_number ? ` - UTR: ${t.utr_number}` : ''})`,
-                created_at: t.updated_at || t.created_at || new Date().toISOString(),
-              });
-            }
-          }
-        }
-      } catch {}
-
-      // E. Query wallets table
-      try {
-        const { data: walData } = await supabase
-          .from('wallets')
-          .select('balance')
-          .in('user_id', idsToTry)
-          .maybeSingle();
-        if (walData && typeof walData.balance === 'number') {
-          if (supabaseBal === null || walData.balance > supabaseBal) {
-            supabaseBal = Number(walData.balance);
-          }
-        }
-      } catch {}
-    }
-
-    // 4. Merge all unique transactions
+    // 3. Merge all unique transactions
     const mergedTxsMap = new Map<string, WalletTransaction>();
     localTxs.forEach((t) => { if (t?.id) mergedTxsMap.set(t.id, t); });
-    supabaseTxs.forEach((t) => { if (t?.id) mergedTxsMap.set(t.id, t); });
     serverTxs.forEach((t) => { if (t?.id) mergedTxsMap.set(t.id, t); });
 
     const finalTxs = Array.from(mergedTxsMap.values()).sort(
@@ -3696,7 +3351,7 @@ export const motorideApi = {
     if (totalCredits > 0 || totalCommissionDebits > 0) {
       finalBal = computedLedgerBal;
     } else {
-      finalBal = supabaseBal ?? localStoredBal ?? computedLedgerBal;
+      finalBal = localStoredBal ?? computedLedgerBal;
     }
 
     const finalWallet = { balance: finalBal, currency: '₹' };
@@ -3708,19 +3363,6 @@ export const motorideApi = {
       if (userId) safeStorage.setItem(`motoride_wallet_txs_${userId}`, JSON.stringify(finalTxs));
       safeStorage.setItem('motoride_all_wallet_txs', JSON.stringify(finalTxs));
     } catch {}
-
-    // Asynchronously keep Supabase profiles and wallets in sync with final deducted balance
-    if (supabase && userId) {
-      (async () => {
-        try {
-          await supabase.from('profiles').update({ wallet_balance: finalBal, updated_at: new Date().toISOString() }).eq('id', userId);
-          if (userPhone) {
-            await supabase.from('profiles').update({ wallet_balance: finalBal, updated_at: new Date().toISOString() }).eq('phone', userPhone);
-          }
-          await supabase.from('wallets').upsert([{ user_id: userId, balance: finalBal, currency: '₹', updated_at: new Date().toISOString() }], { onConflict: 'user_id' });
-        } catch {}
-      })();
-    }
 
     return {
       wallet: finalWallet,
@@ -3744,32 +3386,6 @@ export const motorideApi = {
       }
     } catch {}
 
-    // 2. Direct Supabase update
-    const supabase = getSupabase();
-    if (supabase) {
-      try {
-        const { data: prof } = await supabase.from('profiles').select('wallet_balance').eq('id', userId).maybeSingle();
-        const currentBal = Number(prof?.wallet_balance || 0);
-        finalBal = Number((currentBal + Number(amount)).toFixed(2));
-
-        await supabase.from('profiles').update({ wallet_balance: finalBal, updated_at: now }).eq('id', userId);
-        await supabase.from('wallets').upsert([{ user_id: userId, balance: finalBal, currency: '₹', updated_at: now }]);
-
-        const tx: WalletTransaction = {
-          id: `tx_${Date.now()}`,
-          wallet_id: `w_${userId}`,
-          user_id: userId,
-          amount: Number(amount),
-          type: 'credit',
-          category: 'topup',
-          description: `Wallet top-up (₹${amount})`,
-          created_at: now,
-        };
-        await supabase.from('wallet_transactions').insert([tx]);
-      } catch (err) {
-        console.warn('Supabase topupWallet warning:', err);
-      }
-    }
 
     try {
       safeStorage.setItem(`motoride_wallet_${userId}`, JSON.stringify({ balance: finalBal, currency: '₹' }));
@@ -3809,47 +3425,8 @@ export const motorideApi = {
       }
     } catch {}
 
-    const supabase = getSupabase();
-    let supabaseList: TopupDepositRequest[] = [];
-    let profileStoreList: TopupDepositRequest[] = [];
-
-    if (supabase) {
-      try {
-        let query = supabase.from('topup_requests').select('*');
-        if (params?.captain_id) {
-          query = query.eq('captain_id', params.captain_id);
-        }
-        if (params?.status && params.status !== 'all') {
-          query = query.eq('status', params.status);
-        }
-        const { data, error } = await query.order('created_at', { ascending: false });
-        if (!error && Array.isArray(data)) {
-          supabaseList = data;
-        }
-      } catch (err) {
-        console.warn('Supabase topup_requests fetch warning:', err);
-      }
-
-      // Fallback/Shared profile store JSON backup fetch
-      try {
-        const { data: profData } = await supabase
-          .from('profiles')
-          .select('avatar_url')
-          .or('id.eq.00000000-0000-0000-0000-000000000001,email.eq.motoride_topup_store@motoride.com')
-          .maybeSingle();
-        if (profData?.avatar_url) {
-          const parsed = JSON.parse(profData.avatar_url);
-          if (Array.isArray(parsed)) {
-            profileStoreList = parsed;
-          }
-        }
-      } catch {}
-    }
-
-    // Merge server, Supabase table, profile store JSON backup, and local cache
+    // Merge server and local cache
     const mergedMap = new Map<string, TopupDepositRequest>();
-    profileStoreList.forEach((r) => { if (r?.id) mergedMap.set(r.id, r); });
-    supabaseList.forEach((r) => { if (r?.id) mergedMap.set(r.id, { ...(mergedMap.get(r.id) || {}), ...r }); });
     serverList.forEach((r) => { if (r?.id) mergedMap.set(r.id, { ...(mergedMap.get(r.id) || {}), ...r }); });
 
     const localCached = safeStorage.getItem('motoride_topup_requests_cache');
@@ -3879,17 +3456,6 @@ export const motorideApi = {
 
     try {
       safeStorage.setItem('motoride_topup_requests_cache', JSON.stringify(finalRequests));
-      // Also persist to Supabase profile store JSON backup in background
-      if (supabase) {
-        supabase.from('profiles').upsert([{
-          id: '00000000-0000-0000-0000-000000000001',
-          email: 'motoride_topup_store@motoride.com',
-          name: 'Motoride Topup Store',
-          role: 'admin',
-          avatar_url: JSON.stringify(finalRequests),
-          updated_at: new Date().toISOString(),
-        }], { onConflict: 'id' }).then(() => {});
-      }
     } catch {}
 
     return finalRequests;

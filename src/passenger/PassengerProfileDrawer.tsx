@@ -945,7 +945,7 @@ export const PassengerProfileDrawer: React.FC<PassengerProfileDrawerProps> = ({
 
             <button
               type="button"
-              onClick={() => alert('Motoride 24x7 Support is active in Chandigarh Tri-City.')}
+              onClick={() => alert('Bid 24x7 Support is active in Chandigarh Tri-City.')}
               className="flex items-center justify-between p-2.5 rounded-2xl bg-white/5 border border-white/10 text-white text-xs font-bold hover:bg-white/10 transition-colors cursor-pointer text-left"
             >
               <div className="flex items-center gap-2">
@@ -960,7 +960,7 @@ export const PassengerProfileDrawer: React.FC<PassengerProfileDrawerProps> = ({
         {/* Drawer Footer */}
         <div className="p-4 border-t border-white/15 bg-black/60 backdrop-blur-md flex items-center justify-between">
           <div className="flex flex-col">
-            <span className="text-[11px] font-bold text-slate-300">Motoride App v2.4</span>
+            <span className="text-[11px] font-bold text-slate-300">Bid App v2.4</span>
           </div>
           <button
             type="button"

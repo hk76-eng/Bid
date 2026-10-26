@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import { createClient } from '@supabase/supabase-js';
 import {
   MotorideRide,
   Captain,
@@ -17,11 +16,6 @@ import {
   AdminDashboardStats,
   RideMessage,
 } from '../src/types/motoride';
-
-const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://abxxldkhjoxgkcuwkrts.supabase.co';
-const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFieHhsZGtoam94Z2tjdXdrcnRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2MDAxMzQsImV4cCI6MjEwNzE3NjEzNH0.FUwdlaOsL6mCcgjqCBFIissgYjpTpF_rgs5BM3toY6Q';
-
-const dbSupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
 // Real-time Event Broadcaster Subscribers (SSE)
 type SSEClient = (data: { event: string; payload: any }) => void;
@@ -1334,130 +1328,6 @@ export function completeRideAndDeductCommissionServer(
     captainsStore.set(cpt.id, cpt);
   }
 
-  // Synchronize atomically with Supabase (profiles, wallets, wallet_transactions, rides, earnings, captains) in the background so that the 10% commission is permanently stored in Supabase
-  // Runs in a safe async IIFE to prevent unhandled promise rejections and gracefully catch any DB/cast errors.
-  (async () => {
-    try {
-      const sb = dbSupabaseClient;
-      if (!sb) return;
-
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      const isUuid = uuidRegex.test(effectiveCaptainId);
-
-      // A. Update profiles wallet_balance
-      if (isUuid) {
-        await sb.from('profiles')
-          .update({ wallet_balance: walletAfter, updated_at: now })
-          .eq('id', effectiveCaptainId);
-      } else {
-        await sb.from('profiles')
-          .update({ wallet_balance: walletAfter, updated_at: now })
-          .eq('phone', effectiveCaptainId);
-      }
-
-      if (resolvedCaptainPhone) {
-        await sb.from('profiles')
-          .update({ wallet_balance: walletAfter, updated_at: now })
-          .eq('phone', resolvedCaptainPhone);
-      }
-      
-      // B. Update wallets balance (upsert so it works whether row exists or not)
-      await sb.from('wallets')
-        .upsert([{ user_id: effectiveCaptainId, balance: walletAfter, currency: '₹', updated_at: now }], { onConflict: 'user_id' });
-
-      if (resolvedCaptainPhone) {
-        await sb.from('wallets')
-          .upsert([{ user_id: resolvedCaptainPhone, balance: walletAfter, currency: '₹', updated_at: now }], { onConflict: 'user_id' });
-      }
-      
-      // C. Record wallet_transaction in Supabase
-      const { error: txErr } = await sb.from('wallet_transactions').insert([{
-        id: txId,
-        wallet_id: `w_${effectiveCaptainId}`,
-        user_id: effectiveCaptainId,
-        amount: commissionAmount,
-        type: 'debit',
-        category: 'commission_fee',
-        description: `10% Platform Commission for ${isCourier ? 'Delivery' : 'Ride'} #${rideCode} (Fare: ₹${finalFare}, Fee: -₹${commissionAmount}, Net Earning: +₹${captainEarning})`,
-        reference_ride_id: rideId,
-        created_at: now,
-      }]);
-      if (txErr) {
-        console.warn(`[Supabase Sync Warning] Failed to insert wallet transaction: ${txErr.message}`);
-      }
-
-      // D. Record earnings table entry in Supabase
-      const { error: earnErr } = await sb.from('earnings').insert([{
-        id: `earn_${rideId}`,
-        captain_id: effectiveCaptainId,
-        ride_id: rideId,
-        ride_date: now.split('T')[0],
-        gross_fare: finalFare,
-        platform_commission: commissionAmount,
-        net_earnings: captainEarning,
-        created_at: now,
-      }]);
-      if (earnErr) {
-        console.warn(`[Supabase Sync Warning] Failed to insert earnings record: ${earnErr.message}`);
-      }
-
-      // E. Mark Ride completed and payment status paid in Supabase
-      const { error: rideErr } = await sb.from('rides')
-        .update({
-          status: 'completed',
-          payment_status: 'paid',
-          completed_at: now,
-          trip_completed_at: now,
-          updated_at: now,
-        })
-        .eq('id', rideId);
-      if (rideErr) {
-        console.warn(`[Supabase Sync Warning] Failed to update ride completion: ${rideErr.message}`);
-      }
-
-      // F. Increment captain total rides and earnings in Supabase
-      const supabaseCaptainId = effectiveCaptainId;
-      if (isUuid) {
-        // Try query captains table by UUID
-        const { data: sbCpt, error: cptErr } = await sb.from('captains')
-          .select('total_rides, total_earnings, today_earnings')
-          .eq('id', supabaseCaptainId)
-          .maybeSingle();
-
-        if (!cptErr && sbCpt) {
-          const currentRides = Number(sbCpt.total_rides || 0);
-          const currentTotalEarn = Number(sbCpt.total_earnings || 0);
-          const currentTodayEarn = Number(sbCpt.today_earnings || 0);
-          await sb.from('captains').update({
-            total_rides: currentRides + 1,
-            total_earnings: Number((currentTotalEarn + captainEarning).toFixed(2)),
-            today_earnings: Number((currentTodayEarn + captainEarning).toFixed(2)),
-            updated_at: now
-          }).eq('id', supabaseCaptainId);
-        } else {
-          // Also try by profile_id
-          const { data: sbCpt2, error: cptErr2 } = await sb.from('captains')
-            .select('total_rides, total_earnings, today_earnings')
-            .eq('profile_id', supabaseCaptainId)
-            .maybeSingle();
-
-          if (!cptErr2 && sbCpt2) {
-            const currentRides = Number(sbCpt2.total_rides || 0);
-            const currentTotalEarn = Number(sbCpt2.total_earnings || 0);
-            const currentTodayEarn = Number(sbCpt2.today_earnings || 0);
-            await sb.from('captains').update({
-              total_rides: currentRides + 1,
-              total_earnings: Number((currentTotalEarn + captainEarning).toFixed(2)),
-              today_earnings: Number((currentTodayEarn + captainEarning).toFixed(2)),
-              updated_at: now
-            }).eq('profile_id', supabaseCaptainId);
-          }
-        }
-      }
-    } catch (sbErr: any) {
-      console.error('[Supabase Sync Error] Unhandled exception inside sync IIFE:', sbErr.message || sbErr);
-    }
-  })();
 
   persistDbToDisk();
 

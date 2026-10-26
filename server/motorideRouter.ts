@@ -1,5 +1,4 @@
 import { Router, Request, Response } from 'express';
-import { createClient } from '@supabase/supabase-js';
 import {
   ridesStore,
   captainsStore,
@@ -46,12 +45,6 @@ import {
 } from './motorideDb';
 import { MotorideRide, RideOffer, MotorideRideStatus, WalletTransaction, Captain, Passenger, TopupDepositRequest, TopupChatMessage } from '../src/types/motoride';
 import { backendHaversineDistanceKm } from './fareEngine';
-
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL || 'https://abxxldkhjoxgkcuwkrts.supabase.co',
-  process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFieHhsZGtoam94Z2tjdXdrcnRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE2MDAxMzQsImV4cCI6MjEwNzE3NjEzNH0.FUwdlaOsL6mCcgjqCBFIissgYjpTpF_rgs5BM3toY6Q'
-);
 
 export const motorideRouter = Router();
 
@@ -213,28 +206,6 @@ motorideRouter.post('/appwrite/sync-ride', async (req: Request, res: Response) =
   }
 });
 
-// Server-Side Supabase Realtime Bridge (Syncs database events into the backend SSE stream)
-try {
-  supabase
-    .channel('server-supabase-bridge')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'rides' }, (payload: any) => {
-      if (payload.new) {
-        ridesStore.set(payload.new.id, payload.new);
-        broadcastEvent('RIDE_UPDATED', payload.new);
-        if (payload.new.status) {
-          broadcastEvent('RIDE_STATUS_CHANGED', { ride: payload.new, status: payload.new.status });
-        }
-      }
-    })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, (payload: any) => {
-      if (payload.new) {
-        broadcastEvent('PROFILES_UPDATED', payload.new);
-      }
-    })
-    .subscribe();
-} catch (e) {
-  console.warn('[Realtime Sync] Server Supabase Realtime channel notice:', e);
-}
 
 // Helper to ensure ride and all its offers display genuine registered captain profile details
 export function enrichRideWithRegisteredCaptainData(ride: MotorideRide): MotorideRide {
@@ -335,15 +306,6 @@ motorideRouter.get('/rides', (req: Request, res: Response) => {
 motorideRouter.get('/rides/:id', async (req: Request, res: Response) => {
   let ride = ridesStore.get(req.params.id);
   if (!ride) {
-    try {
-      const { data, error } = await supabase.from('rides').select('*').eq('id', req.params.id).single();
-      if (!error && data) {
-        ride = data as MotorideRide;
-        ridesStore.set(ride.id, ride);
-      }
-    } catch {}
-  }
-  if (!ride) {
     return res.status(404).json({ error: 'Ride not found' });
   }
   ride = enrichRideWithRegisteredCaptainData(ride);
@@ -351,32 +313,12 @@ motorideRouter.get('/rides/:id', async (req: Request, res: Response) => {
 });
 
 // Ride Chat Messages Endpoints
-motorideRouter.get('/rides/:id/messages', async (req: Request, res: Response) => {
+motorideRouter.get('/rides/:id/messages', (req: Request, res: Response) => {
   const localMessages = getRideMessages(req.params.id);
-  
-  // Also query Supabase in parallel to merge any cross-device messages
-  try {
-    const { data: dbMessages, error } = await supabase
-      .from('ride_messages')
-      .select('*')
-      .eq('ride_id', req.params.id)
-      .order('created_at', { ascending: true });
-
-    if (!error && Array.isArray(dbMessages)) {
-      const map = new Map<string, any>();
-      localMessages.forEach((m) => { if (m?.id) map.set(m.id, m); });
-      dbMessages.forEach((m) => { if (m?.id) map.set(m.id, m); });
-      const merged = Array.from(map.values()).sort(
-        (a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()
-      );
-      return res.json({ success: true, messages: merged });
-    }
-  } catch {}
-
   res.json({ success: true, messages: localMessages });
 });
 
-motorideRouter.post('/rides/:id/messages', async (req: Request, res: Response) => {
+motorideRouter.post('/rides/:id/messages', (req: Request, res: Response) => {
   const { sender_id, sender_role, sender_name, message } = req.body;
   if (!message || !sender_id || !sender_role) {
     return res.status(400).json({ error: 'Missing required message parameters' });
@@ -388,15 +330,6 @@ motorideRouter.post('/rides/:id/messages', async (req: Request, res: Response) =
     sender_name: sender_name || (sender_role === 'captain' ? 'Captain' : 'Passenger'),
     message,
   });
-
-  // Async insert into Supabase for global cross-device synchronization
-  (async () => {
-    try {
-      await supabase.from('ride_messages').insert([newMsg]);
-    } catch (err: any) {
-      console.warn('Server Supabase insert ride_message notice:', err?.message || err);
-    }
-  })();
 
   res.status(201).json({ success: true, message: newMsg });
 });
@@ -467,14 +400,6 @@ motorideRouter.post('/rides', (req: Request, res: Response) => {
     ridesStore.set(rideId, newRide);
     persistDbToDisk();
 
-    // Async upsert into Supabase for global cross-device synchronization
-    (async () => {
-      try {
-        await supabase.from('rides').upsert([newRide], { onConflict: 'id' });
-      } catch (err: any) {
-        console.warn('Server Supabase upsert ride notice:', err?.message || err);
-      }
-    })();
 
     // Broadcast in real time to all captains and listeners
     broadcastEvent('RIDE_CREATED', newRide);
@@ -1038,25 +963,6 @@ motorideRouter.post('/rides/:id/status', async (req: Request, res: Response) => 
   ridesStore.set(ride.id, ride);
   persistDbToDisk();
 
-  // Atomically update Supabase rides table
-  try {
-    const sbPayload: any = {
-      status,
-      updated_at: now,
-    };
-    if (cancellation_reason) sbPayload.cancellation_reason = cancellation_reason;
-    if (final_distance_km) sbPayload.distance_km = final_distance_km;
-    if (final_fare) sbPayload.final_fare = final_fare;
-    if (status === 'trip_started' || status === 'in_progress') sbPayload.trip_started_at = now;
-    if (status === 'trip_completed' || status === 'completed') {
-      sbPayload.trip_completed_at = now;
-      sbPayload.completed_at = now;
-      sbPayload.payment_status = 'paid';
-    }
-    await supabase.from('rides').update(sbPayload).eq('id', ride.id);
-  } catch (sbErr) {
-    console.warn('Server Supabase ride status update notice:', sbErr);
-  }
 
   broadcastEvent('RIDE_STATUS_CHANGED', { ride, status });
   broadcastEvent('RIDE_UPDATED', ride);
@@ -2421,19 +2327,6 @@ motorideRouter.post('/captains/:id/profile', (req: Request, res: Response) => {
     }
   }
 
-  // Also sync to Supabase profiles in background
-  try {
-    const sbPayload: any = { updated_at: new Date().toISOString() };
-    if (resolvedName) sbPayload.name = resolvedName;
-    if (phone) sbPayload.phone = phone;
-    if (email) sbPayload.email = email;
-    if (avatar_url) sbPayload.avatar_url = avatar_url;
-    if (cpt.id && (cpt.id.length === 36 || cpt.id.includes('-'))) {
-      supabase.from('profiles').update(sbPayload).eq('id', cpt.id).then(() => {});
-    } else if (phone) {
-      supabase.from('profiles').update(sbPayload).eq('phone', phone).then(() => {});
-    }
-  } catch {}
 
   persistDbToDisk();
   broadcastEvent('CAPTAINS_UPDATED', Array.from(captainsStore.values()));
@@ -2904,25 +2797,6 @@ motorideRouter.get('/wallet/:userId', async (req: Request, res: Response) => {
     }
   }
 
-  // 2. Only if not yet known in memory, query Supabase
-  if (!existingWallet) {
-    try {
-      const { data: profile } = await supabase.from('profiles').select('wallet_balance').eq('id', userId).maybeSingle();
-      if (profile && typeof profile.wallet_balance === 'number') {
-        existingWallet = { balance: Number(profile.wallet_balance), currency: '₹' };
-        walletsStore.set(userId, existingWallet);
-      } else {
-        const phoneToQuery = userPhone || userId;
-        const { data: pByPhone } = await supabase.from('profiles').select('wallet_balance').eq('phone', phoneToQuery).maybeSingle();
-        if (pByPhone && typeof pByPhone.wallet_balance === 'number') {
-          existingWallet = { balance: Number(pByPhone.wallet_balance), currency: '₹' };
-          walletsStore.set(userId, existingWallet);
-        }
-      }
-    } catch (err) {
-      console.warn('Backend server failed to fetch wallet balance from Supabase:', err);
-    }
-  }
 
   const wallet = existingWallet || { balance: 500.0, currency: '₹' };
   walletsStore.set(userId, wallet);
@@ -3028,45 +2902,11 @@ motorideRouter.post('/wallet/:userId/withdraw', (req: Request, res: Response) =>
 });
 
 // 6b. Top-Up QR Deposit Proof & Verification API
-motorideRouter.get('/topup-requests', async (req: Request, res: Response) => {
+motorideRouter.get('/topup-requests', (req: Request, res: Response) => {
   const captainId = (req.query.captain_id as string) || '';
   const status = (req.query.status as string) || '';
 
-  const mergedMap = new Map<string, TopupDepositRequest>();
-
-  // 1. Populate from local persistent memory store first
-  for (const [id, r] of topupRequestsStore.entries()) {
-    if (r && r.id) mergedMap.set(id, r);
-  }
-
-  // 2. Fetch from Supabase and merge
-  try {
-    let query = supabase.from('topup_requests').select('*');
-    if (captainId) {
-      query = query.eq('captain_id', captainId);
-    }
-    if (status && status !== 'all') {
-      query = query.eq('status', status);
-    }
-
-    const { data: requests, error } = await query.order('created_at', { ascending: false });
-
-    if (!error && Array.isArray(requests)) {
-      for (const r of requests) {
-        if (r && r.id) {
-          const existing = mergedMap.get(r.id) || {};
-          const merged = { ...existing, ...r };
-          mergedMap.set(r.id, merged);
-          topupRequestsStore.set(r.id, merged);
-        }
-      }
-      persistDbToDisk();
-    }
-  } catch (err) {
-    console.warn('Supabase topup_requests query failed, relying on merged local store:', err);
-  }
-
-  let finalRequests = Array.from(mergedMap.values()).sort(
+  let finalRequests = Array.from(topupRequestsStore.values()).sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
 
@@ -3123,38 +2963,13 @@ motorideRouter.post('/topup-requests', async (req: Request, res: Response) => {
   topupChatStore.set(reqId, existingChat);
   persistDbToDisk();
 
-  // 2. Try persisting to Supabase in parallel
-  try {
-    const { data: sbReq } = await supabase
-      .from('topup_requests')
-      .insert([newRequest])
-      .select()
-      .single();
-    if (sbReq && sbReq.id) {
-      newRequest.id = sbReq.id;
-      initialMessage.request_id = sbReq.id;
-      topupRequestsStore.set(sbReq.id, sbReq);
-    }
-    await supabase.from('topup_chat').insert([initialMessage]);
-  } catch (err) {
-    console.warn('Supabase insert topup error (local preserved):', err);
-  }
-
   broadcastEvent('TOPUP_REQUEST_CREATED', { request: newRequest, message: initialMessage });
   res.json({ success: true, request: newRequest });
 });
 
-motorideRouter.post('/topup-requests/:id/approve', async (req: Request, res: Response) => {
+motorideRouter.post('/topup-requests/:id/approve', (req: Request, res: Response) => {
   const requestId = req.params.id;
-  let request = topupRequestsStore.get(requestId);
-
-  // Try fetching from Supabase if not in local store
-  if (!request) {
-    try {
-      const { data } = await supabase.from('topup_requests').select('*').eq('id', requestId).single();
-      if (data) request = data;
-    } catch {}
-  }
+  const request = topupRequestsStore.get(requestId);
 
   if (!request) {
     return res.status(404).json({ error: 'Top-up deposit request not found' });
@@ -3224,47 +3039,15 @@ motorideRouter.post('/topup-requests/:id/approve', async (req: Request, res: Res
 
   persistDbToDisk();
 
-  // Try updating Supabase (Profiles, Wallets, Transactions, and Topup Request)
-  try {
-    await supabase.from('topup_requests').update({ status: 'approved', updated_at: now }).eq('id', requestId);
-    await supabase.from('topup_chat').insert([approvalMsg]);
-    
-    // Update Supabase Wallets table
-    await supabase.from('wallets').upsert([{
-      user_id: request.captain_id,
-      balance: wallet.balance,
-      currency: '₹',
-      updated_at: now,
-    }]);
-
-    // Update Supabase Profiles table
-    await supabase.from('profiles').update({
-      wallet_balance: wallet.balance,
-      updated_at: now,
-    }).eq('id', request.captain_id);
-
-    // Insert Supabase Wallet Transaction
-    await supabase.from('wallet_transactions').insert([tx]);
-  } catch (err) {
-    console.warn('Supabase approve update error:', err);
-  }
-
   broadcastEvent('TOPUP_REQUEST_UPDATED', { request, wallet, transaction: tx, message: approvalMsg });
   broadcastEvent('WALLET_UPDATED', { user_id: request.captain_id, balance: wallet.balance, wallet, transaction: tx });
   res.json({ success: true, request, wallet, transaction: tx });
 });
 
-motorideRouter.post('/topup-requests/:id/reject', async (req: Request, res: Response) => {
+motorideRouter.post('/topup-requests/:id/reject', (req: Request, res: Response) => {
   const requestId = req.params.id;
   const { rejection_reason } = req.body;
-  let request = topupRequestsStore.get(requestId);
-
-  if (!request) {
-    try {
-      const { data } = await supabase.from('topup_requests').select('*').eq('id', requestId).single();
-      if (data) request = data;
-    } catch {}
-  }
+  const request = topupRequestsStore.get(requestId);
 
   if (!request) {
     return res.status(404).json({ error: 'Top-up deposit request not found' });
@@ -3292,57 +3075,21 @@ motorideRouter.post('/topup-requests/:id/reject', async (req: Request, res: Resp
 
   persistDbToDisk();
 
-  try {
-    await supabase.from('topup_requests').update({
-      status: 'rejected',
-      rejection_reason: request.rejection_reason,
-      updated_at: now,
-    }).eq('id', requestId);
-    await supabase.from('topup_chat').insert([rejectionMsg]);
-  } catch (err) {
-    console.warn('Supabase reject update error:', err);
-  }
-
   broadcastEvent('TOPUP_REQUEST_UPDATED', { request, message: rejectionMsg });
   res.json({ success: true, request });
 });
 
-motorideRouter.get('/topup-requests/:id/messages', async (req: Request, res: Response) => {
+motorideRouter.get('/topup-requests/:id/messages', (req: Request, res: Response) => {
   const requestId = req.params.id;
-  const msgMap = new Map<string, TopupChatMessage>();
-
-  // 1. Local memory store first
   const localMsgs = topupChatStore.get(requestId) || [];
-  for (const m of localMsgs) {
-    if (m && m.id) msgMap.set(m.id, m);
-  }
-
-  // 2. Fetch from Supabase and merge
-  try {
-    const { data: messages, error } = await supabase
-      .from('topup_chat')
-      .select('*')
-      .eq('request_id', requestId)
-      .order('created_at', { ascending: true });
-
-    if (!error && Array.isArray(messages)) {
-      for (const m of messages) {
-        if (m && m.id) msgMap.set(m.id, m);
-      }
-    }
-  } catch (err) {
-    console.warn('Supabase topup_chat fetch error, fallback to memory:', err);
-  }
-
-  const finalMessages = Array.from(msgMap.values()).sort(
+  const finalMessages = localMsgs.sort(
     (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
   );
 
-  topupChatStore.set(requestId, finalMessages);
   res.json({ success: true, messages: finalMessages });
 });
 
-motorideRouter.post('/topup-requests/:id/messages', async (req: Request, res: Response) => {
+motorideRouter.post('/topup-requests/:id/messages', (req: Request, res: Response) => {
   const requestId = req.params.id;
   const { sender_id, sender_role, sender_name, message, image_url } = req.body;
 
@@ -3365,12 +3112,6 @@ motorideRouter.post('/topup-requests/:id/messages', async (req: Request, res: Re
   existing.push(newMsg);
   topupChatStore.set(requestId, existing);
   persistDbToDisk();
-
-  try {
-    await supabase.from('topup_chat').insert([newMsg]);
-  } catch (err) {
-    console.warn('Supabase chat insert error (local preserved):', err);
-  }
 
   broadcastEvent('TOPUP_CHAT_MESSAGE_RECEIVED', { request_id: requestId, message: newMsg });
   res.json({ success: true, message: newMsg });

@@ -86,7 +86,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
               <Wallet className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-extrabold text-white">Motoride Wallet</h3>
+              <h3 className="text-sm font-extrabold text-white">Bid Wallet</h3>
               <span className="text-[11px] text-slate-400 capitalize">{userRole} Account</span>
             </div>
           </div>
