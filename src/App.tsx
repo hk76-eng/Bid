@@ -346,28 +346,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Floating One-Switch Button for Instant App Switch - Hidden in Passenger mode per user request */}
-      {currentRole === 'captain' && !isCaptainOnActiveTrip && (
-        <aside aria-label="Quick App Switcher" className="fixed bottom-4 right-4 z-40">
-          <button
-            type="button"
-            onClick={() => handleRoleChange('passenger')}
-            className="flex items-center gap-2.5 px-4 py-2.5 rounded-full shadow-2xl backdrop-blur-md border transition-all duration-300 cursor-pointer active:scale-95 group bg-slate-900/95 border-emerald-500/50 text-emerald-300 hover:bg-slate-800 hover:border-emerald-400 shadow-emerald-950/40"
-            title="Click to switch to Passenger App"
-          >
-            <div className="flex items-center justify-center w-6 h-6 rounded-full bg-black/50 border border-white/20">
-              <ArrowLeftRight className="w-3.5 h-3.5 group-hover:rotate-180 transition-transform duration-300" />
-            </div>
-            <div className="text-left leading-tight">
-              <div className="text-[10px] text-slate-400 font-medium">Switch to</div>
-              <div className="text-xs font-bold text-white flex items-center gap-1">
-                <span className="text-emerald-400">Passenger App</span>
-                <span className="text-[10px]">👤</span>
-              </div>
-            </div>
-          </button>
-        </aside>
-      )}
+
 
       {/* Bottom Footer with Realtime Network Status & Admin Dashboard Link */}
       <footer className="relative z-20 w-full max-w-7xl mx-auto px-4 sm:px-6 py-3.5 text-center border-t border-slate-800/80 text-xs text-slate-400 bg-slate-950/90 backdrop-blur-sm flex flex-wrap items-center justify-between gap-2">

@@ -84,42 +84,16 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
                 <span>Passenger</span>
               </div>
             ) : (
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleToggleApp}
-                  id="app-one-switch-btn"
-                  className="group relative flex items-center gap-2 px-3.5 py-2 rounded-2xl border-2 transition-all duration-300 shadow-xl cursor-pointer select-none active:scale-95 z-50 bg-slate-900 border-amber-400/80 text-amber-300 hover:border-amber-300 hover:bg-slate-800"
-                  title="Switch to Passenger App"
-                >
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400">
-                    <div className="w-3.5 h-3.5 rounded bg-black/40 border border-white/20 flex items-center justify-center p-0.5 shrink-0">
-                      <img
-                        src="/captain-bike-icon.svg"
-                        alt="Captain"
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
-                    <span>Captain</span>
-                  </div>
-                  <div className="flex items-center gap-1 pl-2 border-l border-white/20 text-xs font-medium text-slate-300 group-hover:text-white">
-                    <span>Switch to Passenger</span>
-                    <ArrowLeftRight className="w-3.5 h-3.5 text-emerald-400 group-hover:rotate-180 transition-transform duration-300" />
-                  </div>
-                </button>
-
-                {/* Open Opposite Tab in New Window/Tab for instant multi-tab ride flow testing */}
-                <a
-                  href="?role=passenger"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hidden sm:flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-[11px] font-semibold border transition-all hover:scale-105 active:scale-95 cursor-pointer bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20"
-                  title="Open Passenger Dashboard in a new browser tab for real-time flow testing"
-                >
-                  <span>Open Passenger Tab</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500/15 border border-amber-500/40 text-amber-300 select-none">
+                <div className="w-3.5 h-3.5 rounded bg-black/40 border border-white/20 flex items-center justify-center p-0.5 shrink-0">
+                  <img
+                    src="/captain-bike-icon.svg"
+                    alt="Captain"
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <span>Captain</span>
               </div>
             )}
 
