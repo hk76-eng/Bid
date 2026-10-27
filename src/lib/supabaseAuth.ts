@@ -368,23 +368,23 @@ export const supabaseAuth = {
    */
   getCurrentUserForRole(role: UserRole): AuthUser {
     try {
-      // 1. Try role-specific stored session first
+      // 1. Try generic session first
+      const genericUser = this.getCurrentUser();
+      if (genericUser) {
+        return genericUser;
+      }
+
+      // 2. Try role-specific stored session
       const roleSpecificRaw = safeStorage.getItem(`motoride_auth_session_${role}`);
       if (roleSpecificRaw) {
         const u = JSON.parse(roleSpecificRaw);
-        if (u && u.role === role) {
+        if (u) {
           if (role === 'captain' && u.email?.toLowerCase().trim() === 'mojobiketaxi@gmail.com') {
             u.name = 'Hemant kashyap';
             u.id = 'cpt_mojobiketaxi';
           }
           return u;
         }
-      }
-
-      // 2. Try generic session if it matches the requested role
-      const genericUser = this.getCurrentUser();
-      if (genericUser && genericUser.role === role) {
-        return genericUser;
       }
 
       // 3. Find registered account strictly matching this role

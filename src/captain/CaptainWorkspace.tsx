@@ -154,23 +154,23 @@ export const CaptainWorkspace: React.FC<CaptainWorkspaceProps> = ({
   onToggleOnline: propToggleOnline,
   onActiveTripChange,
 }) => {
-  // Strictly enforce that authUser is a Captain account, never a passenger account
-  const authUser = (currentUser && currentUser.role === 'captain')
-    ? currentUser
-    : supabaseAuth.getCurrentUserForRole('captain');
+  const authUser = currentUser || supabaseAuth.getCurrentUser();
   const isMojobiketaxi =
     (authUser?.email?.toLowerCase().trim() === 'mojobiketaxi@gmail.com') ||
+    (currentUser?.email?.toLowerCase().trim() === 'mojobiketaxi@gmail.com') ||
     (captainId === 'cpt_mojobiketaxi');
   const storedSavedName = safeStorage.getItem('motoride_captain_name');
   const resolvedInitialName =
     storedSavedName ||
+    currentUser?.name ||
     authUser?.name ||
     (captainName && captainName !== 'Captain' ? captainName : undefined) ||
     (isMojobiketaxi ? 'Hemant kashyap' : 'Captain');
 
   const [captain, setCaptain] = useState<Captain | null>(() => {
-    if (authUser) {
-      const effId = isMojobiketaxi ? 'cpt_mojobiketaxi' : (authUser.id || captainId);
+    if (authUser || currentUser) {
+      const activeUser = currentUser || authUser;
+      const effId = isMojobiketaxi ? 'cpt_mojobiketaxi' : (activeUser?.id || captainId);
       const storedName = safeStorage.getItem('motoride_captain_name');
       const storedPhone = safeStorage.getItem('motoride_captain_phone');
       const storedEmail = safeStorage.getItem('motoride_captain_email');
@@ -183,10 +183,10 @@ export const CaptainWorkspace: React.FC<CaptainWorkspaceProps> = ({
       return {
         id: effId,
         profile_id: `prof_${effId}`,
-        full_name: storedName || authUser?.name || resolvedInitialName,
-        email: storedEmail || authUser?.email || (isMojobiketaxi ? 'mojobiketaxi@gmail.com' : ''),
-        phone: storedPhone || authUser?.phone || (isMojobiketaxi ? '+91 9876543210' : ''),
-        avatar_url: storedAvatar || authUser.avatarUrl,
+        full_name: storedName || currentUser?.name || authUser?.name || resolvedInitialName,
+        email: storedEmail || currentUser?.email || authUser?.email || (isMojobiketaxi ? 'mojobiketaxi@gmail.com' : ''),
+        phone: storedPhone || currentUser?.phone || authUser?.phone || (isMojobiketaxi ? '+91 9876543210' : ''),
+        avatar_url: storedAvatar || currentUser?.avatarUrl || authUser?.avatarUrl,
         is_online: true,
         is_approved: true,
         is_active: true,

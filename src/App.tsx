@@ -190,11 +190,6 @@ export default function App() {
 
   const handleRoleChange = (role: UserRole) => {
     setCurrentRole(role);
-    const userForRole = supabaseAuth.getCurrentUserForRole(role);
-    if (userForRole) {
-      setCurrentUser(userForRole);
-      supabaseAuth.setCurrentUser(userForRole);
-    }
     try {
       if (typeof window !== 'undefined') {
         const url = new URL(window.location.href);
@@ -274,7 +269,7 @@ export default function App() {
         <WorkspaceHeader
           currentRole={currentRole}
           onRoleChange={handleRoleChange}
-          currentUser={currentUser?.role === currentRole ? currentUser : supabaseAuth.getCurrentUserForRole(currentRole)}
+          currentUser={currentUser}
           onSignOut={handleSignOut}
           isCaptainOnline={isCaptainOnline}
           onToggleCaptainOnline={handleToggleCaptainOnline}
@@ -285,46 +280,41 @@ export default function App() {
 
       {/* Main Workspace Render (Gated - Accessible only after authentication) */}
       <main className="flex-1 w-full relative">
-        {currentRole === 'passenger' && (() => {
-          const passengerUser = (currentUser && currentUser.role === 'passenger')
-            ? currentUser
-            : supabaseAuth.getCurrentUserForRole('passenger');
-          return (
-            <PassengerWorkspace
-              currentPassengerId={passengerUser.id}
-              passengerName={passengerUser.name}
-              currentUser={passengerUser}
-              onOpenWallet={() => setIsWalletOpen(true)}
-              onSignOut={handleSignOut}
-            />
-          );
-        })()}
+        {currentRole === 'passenger' && (
+          <PassengerWorkspace
+            currentPassengerId={currentUser?.id || 'usr_passenger_tab'}
+            passengerName={currentUser?.name || 'Passenger'}
+            currentUser={currentUser}
+            onOpenWallet={() => setIsWalletOpen(true)}
+            onSignOut={handleSignOut}
+          />
+        )}
 
         {currentRole === 'captain' && (() => {
-          const captainUser = (currentUser && currentUser.role === 'captain')
-            ? currentUser
-            : supabaseAuth.getCurrentUserForRole('captain');
-          const isMojo = captainUser.email?.toLowerCase().trim() === 'mojobiketaxi@gmail.com';
-          const resolvedCaptainName = safeStorage.getItem('motoride_captain_name') || captainUser.name || (isMojo ? 'Hemant kashyap' : 'Captain');
+          const isMojo = currentUser?.email?.toLowerCase().trim() === 'mojobiketaxi@gmail.com';
+          const resolvedCaptainName = safeStorage.getItem('motoride_captain_name') || currentUser?.name || (isMojo ? 'Hemant kashyap' : 'Captain');
           const resolvedCaptainUser = {
-            ...captainUser,
+            ...currentUser,
+            id: currentUser?.id || 'cpt_mojobiketaxi',
+            email: currentUser?.email || 'mojobiketaxi@gmail.com',
+            role: 'captain' as const,
             name: resolvedCaptainName,
-            phone: safeStorage.getItem('motoride_captain_phone') || captainUser.phone || '+91 9876543210',
-            vehicleModel: safeStorage.getItem('motoride_captain_vehicle_model') || captainUser.vehicleModel || 'Honda Activa 6G',
-            plateNumber: safeStorage.getItem('motoride_captain_plate') || captainUser.plateNumber || 'PB65AX9922',
-            vehicleType: captainUser.vehicleType || 'bike',
+            phone: safeStorage.getItem('motoride_captain_phone') || currentUser?.phone || '+91 9876543210',
+            vehicleModel: safeStorage.getItem('motoride_captain_vehicle_model') || currentUser?.vehicleModel || 'Honda Activa 6G',
+            plateNumber: safeStorage.getItem('motoride_captain_plate') || currentUser?.plateNumber || 'PB65AX9922',
+            vehicleType: currentUser?.vehicleType || 'bike',
             walletBalance: walletBalance,
           };
           return (
             <CaptainWorkspace
-              captainId={captainUser.id}
+              captainId={resolvedCaptainUser.id}
               captainName={resolvedCaptainName}
               currentUser={resolvedCaptainUser}
               walletBalance={walletBalance}
               onWalletBalanceUpdated={(newBal) => {
                 setWalletBalance(newBal);
                 const curr = supabaseAuth.getCurrentUser();
-                if (curr && curr.role === 'captain') {
+                if (curr) {
                   curr.walletBalance = newBal;
                   supabaseAuth.setCurrentUser(curr);
                 }
@@ -340,7 +330,7 @@ export default function App() {
 
         {currentRole === 'admin' && (
           <AdminWorkspace
-            currentUser={currentUser?.role === 'admin' ? currentUser : supabaseAuth.getCurrentUserForRole('admin')}
+            currentUser={currentUser}
             onSignOut={handleSignOut}
           />
         )}

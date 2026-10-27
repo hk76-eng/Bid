@@ -613,17 +613,14 @@ export const PassengerWorkspace: React.FC<PassengerWorkspaceProps> = ({
   onOpenWallet,
   onSignOut,
 }) => {
-  // Strictly enforce that authUser is a Passenger account, never a captain account
-  const authUser = (currentUser && currentUser.role === 'passenger')
-    ? currentUser
-    : supabaseAuth.getCurrentUserForRole('passenger');
+  const authUser = currentUser || supabaseAuth.getCurrentUser();
   const storedPassengerName = safeStorage.getItem('motoride_passenger_name');
-  const isCaptainName = (passengerName === 'Hemant kashyap' || currentUser?.name === 'Hemant kashyap');
   const effectivePassengerName =
     storedPassengerName ||
-    (!isCaptainName && passengerName && passengerName !== 'Passenger' ? passengerName : undefined) ||
-    (!isCaptainName && currentUser?.role === 'passenger' ? currentUser?.name : undefined) ||
-    (authUser?.role === 'passenger' ? authUser.name : 'Ritu Sharma');
+    (passengerName && passengerName !== 'Passenger' ? passengerName : undefined) ||
+    currentUser?.name ||
+    authUser?.name ||
+    'Passenger';
   // Active Ride State
   const [activeRide, setActiveRide] = useState<MotorideRide | null>(null);
   const activeRideRef = useRef<MotorideRide | null>(null);
@@ -4668,10 +4665,10 @@ export const PassengerWorkspace: React.FC<PassengerWorkspaceProps> = ({
       <PassengerProfileDrawer
         isOpen={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}
-        currentUser={authUser}
+        currentUser={currentUser || authUser}
         passengerName={effectivePassengerName}
-        passengerEmail={authUser?.email || safeStorage.getItem('motoride_passenger_email') || 'osmskart@gmail.com'}
-        passengerPhone={authUser?.phone || safeStorage.getItem('motoride_passenger_phone') || '9876543210'}
+        passengerEmail={currentUser?.email || authUser?.email || safeStorage.getItem('motoride_passenger_email') || 'osmskart@gmail.com'}
+        passengerPhone={currentUser?.phone || authUser?.phone || safeStorage.getItem('motoride_passenger_phone') || '9876543210'}
         totalRides={rideHistory.filter((r) => r.status === 'trip_completed' || r.status === 'completed').length}
         onOpenWallet={onOpenWallet}
         onOpenRideHistory={() => setIsRideHistoryOpen(true)}

@@ -282,10 +282,10 @@ export const CaptainProfileDrawer: React.FC<CaptainProfileDrawerProps> = ({
       setAvatarUrl(compressedDataUrl);
       safeStorage.setItem('motoride_captain_avatar', compressedDataUrl);
 
-      // Update auth session & captain state strictly for captain role
-      const user = supabaseAuth.getCurrentUserForRole('captain');
+      // Update auth session & captain state
+      const user = supabaseAuth.getCurrentUser();
       if (user) {
-        const updatedUser = { ...user, role: 'captain' as const, avatarUrl: compressedDataUrl };
+        const updatedUser = { ...user, avatarUrl: compressedDataUrl };
         supabaseAuth.setCurrentUser(updatedUser);
         supabaseAuth.saveAccount({ ...updatedUser, passwordHash: '' });
       }
@@ -299,9 +299,9 @@ export const CaptainProfileDrawer: React.FC<CaptainProfileDrawerProps> = ({
         if (uploadedUrl) {
           setAvatarUrl(uploadedUrl);
           safeStorage.setItem('motoride_captain_avatar', uploadedUrl);
-          const currUser = supabaseAuth.getCurrentUserForRole('captain');
+          const currUser = supabaseAuth.getCurrentUser();
           if (currUser) {
-            const uUser = { ...currUser, role: 'captain' as const, avatarUrl: uploadedUrl };
+            const uUser = { ...currUser, avatarUrl: uploadedUrl };
             supabaseAuth.setCurrentUser(uUser);
             supabaseAuth.saveAccount({ ...uUser, passwordHash: '' });
           }
@@ -327,9 +327,9 @@ export const CaptainProfileDrawer: React.FC<CaptainProfileDrawerProps> = ({
     } catch (err) {
       console.warn(err);
     }
-    const user = supabaseAuth.getCurrentUserForRole('captain');
+    const user = supabaseAuth.getCurrentUser();
     if (user) {
-      const updatedUser = { ...user, role: 'captain' as const, avatarUrl: undefined };
+      const updatedUser = { ...user, avatarUrl: undefined };
       supabaseAuth.setCurrentUser(updatedUser);
       supabaseAuth.saveAccount({ ...updatedUser, passwordHash: '' });
     }
@@ -374,11 +374,10 @@ export const CaptainProfileDrawer: React.FC<CaptainProfileDrawerProps> = ({
       console.warn(err);
     }
 
-    const user = supabaseAuth.getCurrentUserForRole('captain');
+    const user = supabaseAuth.getCurrentUser();
     if (user) {
       const updatedUser = {
         ...user,
-        role: 'captain' as const,
         name: trimmedName,
         email: finalEmail || user.email,
         phone: finalPhone || user.phone,

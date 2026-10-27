@@ -67,20 +67,20 @@ export const PassengerProfileDrawer: React.FC<PassengerProfileDrawerProps> = ({
   onSignOut,
   onUpdateUser,
 }) => {
-  // Strictly ensure authUser is a Passenger account, never a Captain account
-  const authUser = (currentUser && currentUser.role === 'passenger')
-    ? currentUser
-    : supabaseAuth.getCurrentUserForRole('passenger');
+  const authUser = currentUser || supabaseAuth.getCurrentUser();
 
   const initialName = safeStorage.getItem('motoride_passenger_name') ||
-    (passengerName && passengerName !== 'Passenger' && passengerName !== 'Hemant kashyap' ? passengerName : undefined) ||
-    (authUser?.role === 'passenger' ? authUser.name : 'Ritu Sharma');
+    (passengerName && passengerName !== 'Passenger' ? passengerName : undefined) ||
+    authUser?.name ||
+    'Passenger';
   const initialEmail = safeStorage.getItem('motoride_passenger_email') ||
-    (passengerEmail && passengerEmail.toLowerCase() !== 'mojobiketaxi@gmail.com' ? passengerEmail : undefined) ||
-    (authUser?.role === 'passenger' ? authUser.email : 'osmskart@gmail.com');
+    passengerEmail ||
+    authUser?.email ||
+    'osmskart@gmail.com';
   const initialPhone = safeStorage.getItem('motoride_passenger_phone') ||
-    (passengerPhone && passengerPhone !== '+91 9876543210' ? passengerPhone : undefined) ||
-    (authUser?.role === 'passenger' ? authUser.phone : '9876543210');
+    passengerPhone ||
+    authUser?.phone ||
+    '9876543210';
 
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(initialName);
@@ -194,16 +194,14 @@ export const PassengerProfileDrawer: React.FC<PassengerProfileDrawerProps> = ({
 
   // Sync state whenever props or drawer open state changes
   useEffect(() => {
-    const current = (currentUser && currentUser.role === 'passenger')
-      ? currentUser
-      : supabaseAuth.getCurrentUserForRole('passenger');
+    const current = currentUser || supabaseAuth.getCurrentUser();
     const storedName = safeStorage.getItem('motoride_passenger_name');
     const storedEmail = safeStorage.getItem('motoride_passenger_email');
     const storedPhone = safeStorage.getItem('motoride_passenger_phone');
 
-    setName(storedName || (passengerName && passengerName !== 'Passenger' && passengerName !== 'Hemant kashyap' ? passengerName : (current?.role === 'passenger' ? current.name : undefined)) || 'Ritu Sharma');
-    setEmail(storedEmail || (passengerEmail && passengerEmail.toLowerCase() !== 'mojobiketaxi@gmail.com' ? passengerEmail : (current?.role === 'passenger' ? current.email : undefined)) || 'osmskart@gmail.com');
-    setPhone(storedPhone || (passengerPhone && passengerPhone !== '+91 9876543210' ? passengerPhone : (current?.role === 'passenger' ? current.phone : undefined)) || '9876543210');
+    setName(storedName || (passengerName && passengerName !== 'Passenger' ? passengerName : current?.name) || 'Passenger');
+    setEmail(storedEmail || passengerEmail || current?.email || 'osmskart@gmail.com');
+    setPhone(storedPhone || passengerPhone || current?.phone || '9876543210');
 
     const savedAvatar = current?.avatarUrl || safeStorage.getItem('motoride_passenger_avatar');
     if (savedAvatar) {
@@ -237,12 +235,10 @@ export const PassengerProfileDrawer: React.FC<PassengerProfileDrawerProps> = ({
       setAvatarUrl(compressedDataUrl);
       safeStorage.setItem('motoride_passenger_avatar', compressedDataUrl);
 
-      // Instantly sync compressed avatar to passenger session & registered accounts
-      const current = (currentUser && currentUser.role === 'passenger')
-        ? currentUser
-        : supabaseAuth.getCurrentUserForRole('passenger');
+      // Instantly sync compressed avatar to session & registered accounts
+      const current = currentUser || supabaseAuth.getCurrentUser();
       if (current) {
-        const updatedUser: AuthUser = { ...current, role: 'passenger', avatarUrl: compressedDataUrl };
+        const updatedUser: AuthUser = { ...current, avatarUrl: compressedDataUrl };
         supabaseAuth.setCurrentUser(updatedUser);
         supabaseAuth.saveAccount({ ...updatedUser, passwordHash: '' });
         if (onUpdateUser) onUpdateUser(updatedUser);
@@ -253,11 +249,9 @@ export const PassengerProfileDrawer: React.FC<PassengerProfileDrawerProps> = ({
         if (uploadedUrl) {
           setAvatarUrl(uploadedUrl);
           safeStorage.setItem('motoride_passenger_avatar', uploadedUrl);
-          const curr = (currentUser && currentUser.role === 'passenger')
-            ? currentUser
-            : supabaseAuth.getCurrentUserForRole('passenger');
+          const curr = currentUser || supabaseAuth.getCurrentUser();
           if (curr) {
-            const uUser: AuthUser = { ...curr, role: 'passenger', avatarUrl: uploadedUrl };
+            const uUser: AuthUser = { ...curr, avatarUrl: uploadedUrl };
             supabaseAuth.setCurrentUser(uUser);
             supabaseAuth.saveAccount({ ...uUser, passwordHash: '' });
             if (onUpdateUser) onUpdateUser(uUser);
@@ -281,11 +275,9 @@ export const PassengerProfileDrawer: React.FC<PassengerProfileDrawerProps> = ({
     } catch (err) {
       console.warn(err);
     }
-    const current = (currentUser && currentUser.role === 'passenger')
-      ? currentUser
-      : supabaseAuth.getCurrentUserForRole('passenger');
+    const current = currentUser || supabaseAuth.getCurrentUser();
     if (current) {
-      const updatedUser: AuthUser = { ...current, role: 'passenger', avatarUrl: undefined };
+      const updatedUser: AuthUser = { ...current, avatarUrl: undefined };
       supabaseAuth.setCurrentUser(updatedUser);
       if (onUpdateUser) onUpdateUser(updatedUser);
     }
@@ -330,14 +322,11 @@ export const PassengerProfileDrawer: React.FC<PassengerProfileDrawerProps> = ({
     setIsEditing(false);
 
     try {
-      const user = (currentUser && currentUser.role === 'passenger')
-        ? currentUser
-        : supabaseAuth.getCurrentUserForRole('passenger');
+      const user = currentUser || supabaseAuth.getCurrentUser();
       if (user) {
         const finalAvatar = avatarUrl || user.avatarUrl || safeStorage.getItem('motoride_passenger_avatar') || undefined;
         const updatedUser: AuthUser = {
           ...user,
-          role: 'passenger',
           name: name.trim() || user.name,
           email: email.trim() || user.email,
           phone: phone.trim() || user.phone,
