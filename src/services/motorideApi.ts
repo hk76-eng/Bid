@@ -487,8 +487,7 @@ export const motorideApi = {
         if (r && r.id) map.set(r.id, r);
       });
     } else {
-      // For active_for_captain: NEVER preload old rides from persistent localStorage!
-      // Only include brand-new in-flight rides created in the last 4 seconds in this session.
+      // For active_for_captain: include active rides created within the 120-second validity window.
       const now = Date.now();
       localRidesStore.forEach((r) => {
         if (
@@ -499,7 +498,7 @@ export const motorideApi = {
           r.passenger_id !== 'usr_demo_100'
         ) {
           const age = now - new Date(r.created_at || 0).getTime();
-          if (age < 4000) {
+          if (age <= 120000) {
             map.set(r.id, r);
           }
         }
