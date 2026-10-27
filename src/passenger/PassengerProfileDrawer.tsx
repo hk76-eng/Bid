@@ -67,18 +67,26 @@ export const PassengerProfileDrawer: React.FC<PassengerProfileDrawerProps> = ({
   onSignOut,
   onUpdateUser,
 }) => {
-  const authUser = currentUser || supabaseAuth.getCurrentUser();
-  const initialName = (passengerName && passengerName !== 'Passenger')
-    ? passengerName
-    : (authUser?.name || passengerName || 'Passenger');
-  const initialEmail = passengerEmail || authUser?.email || '';
-  const initialPhone = passengerPhone || authUser?.phone || '';
+  // Strictly ensure authUser is a Passenger account, never a Captain account
+  const authUser = (currentUser && currentUser.role === 'passenger')
+    ? currentUser
+    : supabaseAuth.getCurrentUserForRole('passenger');
+
+  const initialName = safeStorage.getItem('motoride_passenger_name') ||
+    (passengerName && passengerName !== 'Passenger' && passengerName !== 'Hemant kashyap' ? passengerName : undefined) ||
+    (authUser?.role === 'passenger' ? authUser.name : 'Ritu Sharma');
+  const initialEmail = safeStorage.getItem('motoride_passenger_email') ||
+    (passengerEmail && passengerEmail.toLowerCase() !== 'mojobiketaxi@gmail.com' ? passengerEmail : undefined) ||
+    (authUser?.role === 'passenger' ? authUser.email : 'osmskart@gmail.com');
+  const initialPhone = safeStorage.getItem('motoride_passenger_phone') ||
+    (passengerPhone && passengerPhone !== '+91 9876543210' ? passengerPhone : undefined) ||
+    (authUser?.role === 'passenger' ? authUser.phone : '9876543210');
 
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(initialName);
   const [phone, setPhone] = useState(initialPhone);
   const [email, setEmail] = useState(initialEmail);
-  const [emergencyContact, setEmergencyContact] = useState(() => authUser?.phone || '');
+  const [emergencyContact, setEmergencyContact] = useState(() => (authUser?.role === 'passenger' ? authUser.phone : '') || '9876543210');
   const [isSavedToast, setIsSavedToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('Profile details saved successfully!');
   const [shareTripWithContact, setShareTripWithContact] = useState(true);
@@ -186,24 +194,16 @@ export const PassengerProfileDrawer: React.FC<PassengerProfileDrawerProps> = ({
 
   // Sync state whenever props or drawer open state changes
   useEffect(() => {
-    const current = currentUser || supabaseAuth.getCurrentUser();
-    if (passengerName && passengerName !== 'Passenger') {
-      setName(passengerName);
-    } else if (current?.name) {
-      setName(current.name);
-    }
+    const current = (currentUser && currentUser.role === 'passenger')
+      ? currentUser
+      : supabaseAuth.getCurrentUserForRole('passenger');
+    const storedName = safeStorage.getItem('motoride_passenger_name');
+    const storedEmail = safeStorage.getItem('motoride_passenger_email');
+    const storedPhone = safeStorage.getItem('motoride_passenger_phone');
 
-    if (passengerEmail) {
-      setEmail(passengerEmail);
-    } else if (current?.email) {
-      setEmail(current.email);
-    }
-
-    if (passengerPhone) {
-      setPhone(passengerPhone);
-    } else if (current?.phone) {
-      setPhone(current.phone);
-    }
+    setName(storedName || (passengerName && passengerName !== 'Passenger' && passengerName !== 'Hemant kashyap' ? passengerName : (current?.role === 'passenger' ? current.name : undefined)) || 'Ritu Sharma');
+    setEmail(storedEmail || (passengerEmail && passengerEmail.toLowerCase() !== 'mojobiketaxi@gmail.com' ? passengerEmail : (current?.role === 'passenger' ? current.email : undefined)) || 'osmskart@gmail.com');
+    setPhone(storedPhone || (passengerPhone && passengerPhone !== '+91 9876543210' ? passengerPhone : (current?.role === 'passenger' ? current.phone : undefined)) || '9876543210');
 
     const savedAvatar = current?.avatarUrl || safeStorage.getItem('motoride_passenger_avatar');
     if (savedAvatar) {
@@ -237,10 +237,12 @@ export const PassengerProfileDrawer: React.FC<PassengerProfileDrawerProps> = ({
       setAvatarUrl(compressedDataUrl);
       safeStorage.setItem('motoride_passenger_avatar', compressedDataUrl);
 
-      // Instantly sync compressed avatar to session & registered accounts
-      const current = currentUser || supabaseAuth.getCurrentUser();
+      // Instantly sync compressed avatar to passenger session & registered accounts
+      const current = (currentUser && currentUser.role === 'passenger')
+        ? currentUser
+        : supabaseAuth.getCurrentUserForRole('passenger');
       if (current) {
-        const updatedUser: AuthUser = { ...current, avatarUrl: compressedDataUrl };
+        const updatedUser: AuthUser = { ...current, role: 'passenger', avatarUrl: compressedDataUrl };
         supabaseAuth.setCurrentUser(updatedUser);
         supabaseAuth.saveAccount({ ...updatedUser, passwordHash: '' });
         if (onUpdateUser) onUpdateUser(updatedUser);
@@ -251,9 +253,11 @@ export const PassengerProfileDrawer: React.FC<PassengerProfileDrawerProps> = ({
         if (uploadedUrl) {
           setAvatarUrl(uploadedUrl);
           safeStorage.setItem('motoride_passenger_avatar', uploadedUrl);
-          const curr = currentUser || supabaseAuth.getCurrentUser();
+          const curr = (currentUser && currentUser.role === 'passenger')
+            ? currentUser
+            : supabaseAuth.getCurrentUserForRole('passenger');
           if (curr) {
-            const uUser: AuthUser = { ...curr, avatarUrl: uploadedUrl };
+            const uUser: AuthUser = { ...curr, role: 'passenger', avatarUrl: uploadedUrl };
             supabaseAuth.setCurrentUser(uUser);
             supabaseAuth.saveAccount({ ...uUser, passwordHash: '' });
             if (onUpdateUser) onUpdateUser(uUser);
@@ -277,9 +281,11 @@ export const PassengerProfileDrawer: React.FC<PassengerProfileDrawerProps> = ({
     } catch (err) {
       console.warn(err);
     }
-    const current = currentUser || supabaseAuth.getCurrentUser();
+    const current = (currentUser && currentUser.role === 'passenger')
+      ? currentUser
+      : supabaseAuth.getCurrentUserForRole('passenger');
     if (current) {
-      const updatedUser: AuthUser = { ...current, avatarUrl: undefined };
+      const updatedUser: AuthUser = { ...current, role: 'passenger', avatarUrl: undefined };
       supabaseAuth.setCurrentUser(updatedUser);
       if (onUpdateUser) onUpdateUser(updatedUser);
     }
@@ -324,16 +330,25 @@ export const PassengerProfileDrawer: React.FC<PassengerProfileDrawerProps> = ({
     setIsEditing(false);
 
     try {
-      const user = currentUser || supabaseAuth.getCurrentUser();
+      const user = (currentUser && currentUser.role === 'passenger')
+        ? currentUser
+        : supabaseAuth.getCurrentUserForRole('passenger');
       if (user) {
         const finalAvatar = avatarUrl || user.avatarUrl || safeStorage.getItem('motoride_passenger_avatar') || undefined;
         const updatedUser: AuthUser = {
           ...user,
+          role: 'passenger',
           name: name.trim() || user.name,
           email: email.trim() || user.email,
           phone: phone.trim() || user.phone,
           avatarUrl: finalAvatar,
         };
+        safeStorage.setItem('motoride_passenger_name', updatedUser.name);
+        safeStorage.setItem('motoride_passenger_email', updatedUser.email);
+        safeStorage.setItem('motoride_passenger_phone', updatedUser.phone || '');
+        if (finalAvatar) {
+          safeStorage.setItem('motoride_passenger_avatar', finalAvatar);
+        }
         supabaseAuth.setCurrentUser(updatedUser);
         supabaseAuth.saveAccount({ ...updatedUser, passwordHash: '' });
         if (onUpdateUser) onUpdateUser(updatedUser);

@@ -362,6 +362,93 @@ export const supabaseAuth = {
   },
 
   /**
+   * Get stored auth user strictly for a specific role.
+   * Under no circumstances will a passenger account be returned for 'captain',
+   * and under no circumstances will a captain account be returned for 'passenger'.
+   */
+  getCurrentUserForRole(role: UserRole): AuthUser {
+    try {
+      // 1. Try role-specific stored session first
+      const roleSpecificRaw = safeStorage.getItem(`motoride_auth_session_${role}`);
+      if (roleSpecificRaw) {
+        const u = JSON.parse(roleSpecificRaw);
+        if (u && u.role === role) {
+          if (role === 'captain' && u.email?.toLowerCase().trim() === 'mojobiketaxi@gmail.com') {
+            u.name = 'Hemant kashyap';
+            u.id = 'cpt_mojobiketaxi';
+          }
+          return u;
+        }
+      }
+
+      // 2. Try generic session if it matches the requested role
+      const genericUser = this.getCurrentUser();
+      if (genericUser && genericUser.role === role) {
+        return genericUser;
+      }
+
+      // 3. Find registered account strictly matching this role
+      const registered = this.getRegisteredAccounts().filter((a) => a.role === role);
+      if (registered.length > 0) {
+        const match = registered[0];
+        const authUser: AuthUser = {
+          id: match.id,
+          email: match.email,
+          name: match.name,
+          role: match.role,
+          phone: match.phone,
+          avatarUrl: match.avatarUrl || safeStorage.getItem(`motoride_${role}_avatar`) || undefined,
+          vehicleModel: match.vehicleModel,
+          plateNumber: match.plateNumber,
+          vehicleType: match.vehicleType,
+          walletBalance: match.walletBalance,
+          memberSince: match.memberSince,
+        };
+        return authUser;
+      }
+    } catch (e) {
+      console.warn('Failed to get user for role:', role, e);
+    }
+
+    // 4. Fallback defaults strictly isolated per role
+    if (role === 'captain') {
+      const storedBal = safeStorage.getItem('motoride_captain_wallet_balance');
+      return {
+        id: 'cpt_mojobiketaxi',
+        email: 'mojobiketaxi@gmail.com',
+        name: safeStorage.getItem('motoride_captain_name') || 'Hemant kashyap',
+        role: 'captain',
+        phone: safeStorage.getItem('motoride_captain_phone') || '+91 9876543210',
+        avatarUrl: safeStorage.getItem('motoride_captain_avatar') || undefined,
+        vehicleModel: safeStorage.getItem('motoride_captain_vehicle_model') || 'Honda Activa 6G',
+        plateNumber: safeStorage.getItem('motoride_captain_plate') || 'PB65AX9922',
+        vehicleType: 'bike',
+        walletBalance: storedBal && !isNaN(Number(storedBal)) ? Number(storedBal) : 500,
+        memberSince: '2024-01-01T00:00:00.000Z',
+      };
+    } else if (role === 'passenger') {
+      return {
+        id: 'usr_1789917923920_d4ka',
+        email: safeStorage.getItem('motoride_passenger_email') || 'osmskart@gmail.com',
+        name: safeStorage.getItem('motoride_passenger_name') || 'Ritu Sharma',
+        role: 'passenger',
+        phone: safeStorage.getItem('motoride_passenger_phone') || '9876543210',
+        avatarUrl: safeStorage.getItem('motoride_passenger_avatar') || undefined,
+        walletBalance: 200,
+        memberSince: '2024-01-01T00:00:00.000Z',
+      };
+    }
+
+    return {
+      id: 'adm_01',
+      email: 'admin@motoride.com',
+      name: 'System Administrator',
+      role: 'admin',
+      memberSince: '2024-01-01T00:00:00.000Z',
+    };
+  },
+
+  /**
    * Get current stored auth user from localStorage session
    */
   getCurrentUser(): AuthUser | null {
@@ -399,7 +486,7 @@ export const supabaseAuth = {
   },
 
   /**
-   * Save user session locally
+   * Save user session locally with role-separated storage keys
    */
   setCurrentUser(user: AuthUser | null) {
     if (user) {
@@ -410,7 +497,21 @@ export const supabaseAuth = {
         avatarUrl: resolvedAvatar,
       };
       safeStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(userToSave));
+      safeStorage.setItem(`motoride_auth_session_${user.role}`, JSON.stringify(userToSave));
       safeStorage.setItem('motoride_active_role', user.role);
+
+      if (user.role === 'captain') {
+        safeStorage.setItem('motoride_captain_name', user.name);
+        if (user.email) safeStorage.setItem('motoride_captain_email', user.email);
+        if (user.phone) safeStorage.setItem('motoride_captain_phone', user.phone);
+        if (user.vehicleModel) safeStorage.setItem('motoride_captain_vehicle_model', user.vehicleModel);
+        if (user.plateNumber) safeStorage.setItem('motoride_captain_plate', user.plateNumber);
+      } else if (user.role === 'passenger') {
+        safeStorage.setItem('motoride_passenger_name', user.name);
+        if (user.email) safeStorage.setItem('motoride_passenger_email', user.email);
+        if (user.phone) safeStorage.setItem('motoride_passenger_phone', user.phone);
+      }
+
       if (resolvedAvatar) {
         safeStorage.setItem(`motoride_${user.role}_avatar`, resolvedAvatar);
       }

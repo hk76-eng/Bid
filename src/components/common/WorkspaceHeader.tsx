@@ -7,7 +7,7 @@ import {
   Shield,
   ExternalLink,
 } from 'lucide-react';
-import { AuthUser } from '../../lib/supabaseAuth';
+import { AuthUser, supabaseAuth } from '../../lib/supabaseAuth';
 
 interface WorkspaceHeaderProps {
   currentRole: UserRole;
@@ -174,32 +174,43 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
             )}
           </div>
 
-          {/* User Account Info & Sign Out */}
-          {currentUser && (
-            <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
-              <div className="hidden lg:flex flex-col text-right">
-                <span className="text-xs font-bold text-white truncate max-w-[120px]">
-                  {currentUser.email?.toLowerCase().trim() === 'mojobiketaxi@gmail.com' ? 'Hemant kashyap' : currentUser.name}
-                </span>
-                <span className="text-[10px] text-slate-400 truncate max-w-[120px]">
-                  {currentUser.email}
-                </span>
-              </div>
+          {/* User Account Info & Sign Out (Strictly filtered by currentRole: never show passenger in captain or captain in passenger) */}
+          {(() => {
+            const displayUser = (currentUser && currentUser.role === currentRole)
+              ? currentUser
+              : supabaseAuth.getCurrentUserForRole(currentRole);
 
-              {onSignOut && (
-                <button
-                  type="button"
-                  onClick={onSignOut}
-                  title="Sign Out from Supabase session"
-                  aria-label="Sign Out"
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 hover:text-rose-200 border border-rose-500/25 text-xs font-bold transition-all cursor-pointer active:scale-95 shrink-0"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Sign Out</span>
-                </button>
-              )}
-            </div>
-          )}
+            if (!displayUser) return null;
+
+            const isMojo = displayUser.email?.toLowerCase().trim() === 'mojobiketaxi@gmail.com';
+            const displayName = isMojo ? 'Hemant kashyap' : displayUser.name;
+
+            return (
+              <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
+                <div className="hidden lg:flex flex-col text-right">
+                  <span className="text-xs font-bold text-white truncate max-w-[130px]">
+                    {displayName}
+                  </span>
+                  <span className="text-[10px] text-slate-400 truncate max-w-[130px]">
+                    {displayUser.email}
+                  </span>
+                </div>
+
+                {onSignOut && (
+                  <button
+                    type="button"
+                    onClick={onSignOut}
+                    title="Sign Out from Supabase session"
+                    aria-label="Sign Out"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 hover:text-rose-200 border border-rose-500/25 text-xs font-bold transition-all cursor-pointer active:scale-95 shrink-0"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Sign Out</span>
+                  </button>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </div>
     </header>

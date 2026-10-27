@@ -613,8 +613,17 @@ export const PassengerWorkspace: React.FC<PassengerWorkspaceProps> = ({
   onOpenWallet,
   onSignOut,
 }) => {
-  const authUser = currentUser || supabaseAuth.getCurrentUser();
-  const effectivePassengerName = currentUser?.name || (passengerName !== 'Passenger' ? passengerName : undefined) || authUser?.name || passengerName || 'Passenger';
+  // Strictly enforce that authUser is a Passenger account, never a captain account
+  const authUser = (currentUser && currentUser.role === 'passenger')
+    ? currentUser
+    : supabaseAuth.getCurrentUserForRole('passenger');
+  const storedPassengerName = safeStorage.getItem('motoride_passenger_name');
+  const isCaptainName = (passengerName === 'Hemant kashyap' || currentUser?.name === 'Hemant kashyap');
+  const effectivePassengerName =
+    storedPassengerName ||
+    (!isCaptainName && passengerName && passengerName !== 'Passenger' ? passengerName : undefined) ||
+    (!isCaptainName && currentUser?.role === 'passenger' ? currentUser?.name : undefined) ||
+    (authUser?.role === 'passenger' ? authUser.name : 'Ritu Sharma');
   // Active Ride State
   const [activeRide, setActiveRide] = useState<MotorideRide | null>(null);
   const activeRideRef = useRef<MotorideRide | null>(null);
@@ -4659,10 +4668,10 @@ export const PassengerWorkspace: React.FC<PassengerWorkspaceProps> = ({
       <PassengerProfileDrawer
         isOpen={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}
-        currentUser={currentUser || authUser}
+        currentUser={authUser}
         passengerName={effectivePassengerName}
-        passengerEmail={currentUser?.email || authUser?.email}
-        passengerPhone={currentUser?.phone || authUser?.phone}
+        passengerEmail={authUser?.email || safeStorage.getItem('motoride_passenger_email') || 'osmskart@gmail.com'}
+        passengerPhone={authUser?.phone || safeStorage.getItem('motoride_passenger_phone') || '9876543210'}
         totalRides={rideHistory.filter((r) => r.status === 'trip_completed' || r.status === 'completed').length}
         onOpenWallet={onOpenWallet}
         onOpenRideHistory={() => setIsRideHistoryOpen(true)}

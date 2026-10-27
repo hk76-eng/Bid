@@ -190,6 +190,11 @@ export default function App() {
 
   const handleRoleChange = (role: UserRole) => {
     setCurrentRole(role);
+    const userForRole = supabaseAuth.getCurrentUserForRole(role);
+    if (userForRole) {
+      setCurrentUser(userForRole);
+      supabaseAuth.setCurrentUser(userForRole);
+    }
     try {
       if (typeof window !== 'undefined') {
         const url = new URL(window.location.href);
@@ -269,7 +274,7 @@ export default function App() {
         <WorkspaceHeader
           currentRole={currentRole}
           onRoleChange={handleRoleChange}
-          currentUser={currentUser}
+          currentUser={currentUser?.role === currentRole ? currentUser : supabaseAuth.getCurrentUserForRole(currentRole)}
           onSignOut={handleSignOut}
           isCaptainOnline={isCaptainOnline}
           onToggleCaptainOnline={handleToggleCaptainOnline}
@@ -280,77 +285,62 @@ export default function App() {
 
       {/* Main Workspace Render (Gated - Accessible only after authentication) */}
       <main className="flex-1 w-full relative">
-        {currentRole === 'passenger' && (
-          <PassengerWorkspace
-            currentPassengerId={currentUser.role === 'passenger' ? currentUser.id : 'usr_passenger_tab'}
-            passengerName={currentUser.role === 'passenger' ? currentUser.name : 'Passenger'}
-            currentUser={currentUser.role === 'passenger' ? currentUser : {
-              id: 'usr_passenger_tab',
-              email: 'passenger@motoride.app',
-              name: 'Passenger',
-              phone: '+91 9811223344',
-              role: 'passenger',
-              walletBalance: 250,
-            }}
-            onOpenWallet={() => setIsWalletOpen(true)}
-            onSignOut={handleSignOut}
-          />
-        )}
+        {currentRole === 'passenger' && (() => {
+          const passengerUser = (currentUser && currentUser.role === 'passenger')
+            ? currentUser
+            : supabaseAuth.getCurrentUserForRole('passenger');
+          return (
+            <PassengerWorkspace
+              currentPassengerId={passengerUser.id}
+              passengerName={passengerUser.name}
+              currentUser={passengerUser}
+              onOpenWallet={() => setIsWalletOpen(true)}
+              onSignOut={handleSignOut}
+            />
+          );
+        })()}
 
-        {currentRole === 'captain' && (
-          <CaptainWorkspace
-            captainId={
-              currentUser.role === 'captain' && currentUser.email?.toLowerCase().trim() !== 'mojobiketaxi@gmail.com'
-                ? currentUser.id
-                : 'cpt_mojobiketaxi'
-            }
-            captainName={
-              safeStorage.getItem('motoride_captain_name') ||
-              (currentUser.role === 'captain' ? currentUser.name : null) ||
-              'Hemant kashyap'
-            }
-            currentUser={
-              currentUser.role === 'captain'
-                ? {
-                    ...currentUser,
-                    name: safeStorage.getItem('motoride_captain_name') || currentUser.name || 'Hemant kashyap',
-                    phone: safeStorage.getItem('motoride_captain_phone') || currentUser.phone || '+91 9876543210',
-                    vehicleModel: safeStorage.getItem('motoride_captain_vehicle_model') || currentUser.vehicleModel || 'Honda Activa 6G',
-                    plateNumber: safeStorage.getItem('motoride_captain_plate') || currentUser.plateNumber || 'PB65AX9922',
-                    vehicleType: currentUser.vehicleType || 'bike',
-                  }
-                : {
-                    id: 'cpt_mojobiketaxi',
-                    email: 'mojobiketaxi@gmail.com',
-                    name: safeStorage.getItem('motoride_captain_name') || 'Hemant kashyap',
-                    phone: safeStorage.getItem('motoride_captain_phone') || '+91 9876543210',
-                    role: 'captain',
-                    vehicleModel: safeStorage.getItem('motoride_captain_vehicle_model') || 'Honda Activa 6G',
-                    plateNumber: safeStorage.getItem('motoride_captain_plate') || 'PB65AX9922',
-                    vehicleType: 'bike',
-                    walletBalance: walletBalance,
-                  }
-            }
-            walletBalance={walletBalance}
-            onWalletBalanceUpdated={(newBal) => {
-              setWalletBalance(newBal);
-              const curr = supabaseAuth.getCurrentUser();
-              if (curr) {
-                curr.walletBalance = newBal;
-                supabaseAuth.setCurrentUser(curr);
-              }
-            }}
-            onOpenWallet={() => setIsWalletOpen(true)}
-            onSignOut={handleSignOut}
-            isOnline={isCaptainOnline}
-            onToggleOnline={handleToggleCaptainOnline}
-            onActiveTripChange={setIsCaptainOnActiveTrip}
-          />
-        )}
+        {currentRole === 'captain' && (() => {
+          const captainUser = (currentUser && currentUser.role === 'captain')
+            ? currentUser
+            : supabaseAuth.getCurrentUserForRole('captain');
+          const isMojo = captainUser.email?.toLowerCase().trim() === 'mojobiketaxi@gmail.com';
+          const resolvedCaptainName = safeStorage.getItem('motoride_captain_name') || captainUser.name || (isMojo ? 'Hemant kashyap' : 'Captain');
+          const resolvedCaptainUser = {
+            ...captainUser,
+            name: resolvedCaptainName,
+            phone: safeStorage.getItem('motoride_captain_phone') || captainUser.phone || '+91 9876543210',
+            vehicleModel: safeStorage.getItem('motoride_captain_vehicle_model') || captainUser.vehicleModel || 'Honda Activa 6G',
+            plateNumber: safeStorage.getItem('motoride_captain_plate') || captainUser.plateNumber || 'PB65AX9922',
+            vehicleType: captainUser.vehicleType || 'bike',
+            walletBalance: walletBalance,
+          };
+          return (
+            <CaptainWorkspace
+              captainId={captainUser.id}
+              captainName={resolvedCaptainName}
+              currentUser={resolvedCaptainUser}
+              walletBalance={walletBalance}
+              onWalletBalanceUpdated={(newBal) => {
+                setWalletBalance(newBal);
+                const curr = supabaseAuth.getCurrentUser();
+                if (curr && curr.role === 'captain') {
+                  curr.walletBalance = newBal;
+                  supabaseAuth.setCurrentUser(curr);
+                }
+              }}
+              onOpenWallet={() => setIsWalletOpen(true)}
+              onSignOut={handleSignOut}
+              isOnline={isCaptainOnline}
+              onToggleOnline={handleToggleCaptainOnline}
+              onActiveTripChange={setIsCaptainOnActiveTrip}
+            />
+          );
+        })()}
 
         {currentRole === 'admin' && (
           <AdminWorkspace
-            currentUser={currentUser}
+            currentUser={currentUser?.role === 'admin' ? currentUser : supabaseAuth.getCurrentUserForRole('admin')}
             onSignOut={handleSignOut}
           />
         )}

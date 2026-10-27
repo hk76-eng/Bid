@@ -68,9 +68,9 @@ export const CaptainProfileDrawer: React.FC<CaptainProfileDrawerProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const isMojo = captain?.email?.toLowerCase().trim() === 'mojobiketaxi@gmail.com' || safeStorage.getItem('motoride_captain_email')?.toLowerCase().trim() === 'mojobiketaxi@gmail.com';
   
-  const [name, setName] = useState(() => safeStorage.getItem('motoride_captain_name') || captain?.full_name || (isMojo ? 'Hemant kashyap' : 'Captain'));
-  const [phone, setPhone] = useState(() => safeStorage.getItem('motoride_captain_phone') || captain?.phone || (isMojo ? '+91 9876543210' : ''));
-  const [email, setEmail] = useState(() => safeStorage.getItem('motoride_captain_email') || captain?.email || (isMojo ? 'mojobiketaxi@gmail.com' : ''));
+  const [name, setName] = useState(() => safeStorage.getItem('motoride_captain_name') || (captain?.full_name && captain.full_name !== 'Passenger' && captain.full_name !== 'Ritu Sharma' ? captain.full_name : undefined) || (isMojo ? 'Hemant kashyap' : 'Captain'));
+  const [phone, setPhone] = useState(() => safeStorage.getItem('motoride_captain_phone') || (captain?.phone && captain.phone !== '9876543210' ? captain.phone : undefined) || (isMojo ? '+91 9876543210' : ''));
+  const [email, setEmail] = useState(() => safeStorage.getItem('motoride_captain_email') || (captain?.email && captain.email.toLowerCase() !== 'osmskart@gmail.com' && captain.email.toLowerCase() !== 'passenger@motoride.app' ? captain.email : undefined) || (isMojo ? 'mojobiketaxi@gmail.com' : ''));
   const [vehicleModel, setVehicleModel] = useState(() => safeStorage.getItem('motoride_captain_vehicle_model') || captain?.vehicle?.model || (isMojo ? 'Honda Activa 6G' : 'Motorcycle'));
   const [plateNumber, setPlateNumber] = useState(() => safeStorage.getItem('motoride_captain_plate') || captain?.vehicle?.plate_number || (isMojo ? 'PB65AX9922' : ''));
   const [drivingLicense, setDrivingLicense] = useState(() => safeStorage.getItem('motoride_captain_dl') || (captain as any)?.license_number || '');
@@ -282,10 +282,10 @@ export const CaptainProfileDrawer: React.FC<CaptainProfileDrawerProps> = ({
       setAvatarUrl(compressedDataUrl);
       safeStorage.setItem('motoride_captain_avatar', compressedDataUrl);
 
-      // Update auth session & captain state
-      const user = supabaseAuth.getCurrentUser();
+      // Update auth session & captain state strictly for captain role
+      const user = supabaseAuth.getCurrentUserForRole('captain');
       if (user) {
-        const updatedUser = { ...user, avatarUrl: compressedDataUrl };
+        const updatedUser = { ...user, role: 'captain' as const, avatarUrl: compressedDataUrl };
         supabaseAuth.setCurrentUser(updatedUser);
         supabaseAuth.saveAccount({ ...updatedUser, passwordHash: '' });
       }
@@ -299,9 +299,9 @@ export const CaptainProfileDrawer: React.FC<CaptainProfileDrawerProps> = ({
         if (uploadedUrl) {
           setAvatarUrl(uploadedUrl);
           safeStorage.setItem('motoride_captain_avatar', uploadedUrl);
-          const currUser = supabaseAuth.getCurrentUser();
+          const currUser = supabaseAuth.getCurrentUserForRole('captain');
           if (currUser) {
-            const uUser = { ...currUser, avatarUrl: uploadedUrl };
+            const uUser = { ...currUser, role: 'captain' as const, avatarUrl: uploadedUrl };
             supabaseAuth.setCurrentUser(uUser);
             supabaseAuth.saveAccount({ ...uUser, passwordHash: '' });
           }
@@ -327,10 +327,11 @@ export const CaptainProfileDrawer: React.FC<CaptainProfileDrawerProps> = ({
     } catch (err) {
       console.warn(err);
     }
-    const user = supabaseAuth.getCurrentUser();
+    const user = supabaseAuth.getCurrentUserForRole('captain');
     if (user) {
-      const updatedUser = { ...user, avatarUrl: undefined };
+      const updatedUser = { ...user, role: 'captain' as const, avatarUrl: undefined };
       supabaseAuth.setCurrentUser(updatedUser);
+      supabaseAuth.saveAccount({ ...updatedUser, passwordHash: '' });
     }
     if (onUpdateCaptain) {
       onUpdateCaptain({ avatar_url: undefined });
@@ -373,10 +374,11 @@ export const CaptainProfileDrawer: React.FC<CaptainProfileDrawerProps> = ({
       console.warn(err);
     }
 
-    const user = supabaseAuth.getCurrentUser();
+    const user = supabaseAuth.getCurrentUserForRole('captain');
     if (user) {
       const updatedUser = {
         ...user,
+        role: 'captain' as const,
         name: trimmedName,
         email: finalEmail || user.email,
         phone: finalPhone || user.phone,
@@ -736,9 +738,9 @@ export const CaptainProfileDrawer: React.FC<CaptainProfileDrawerProps> = ({
                 type="button"
                 onClick={() => {
                   if (isEditing) {
-                    setName(safeStorage.getItem('motoride_captain_name') || captain?.full_name || (isMojo ? 'Hemant kashyap' : 'Captain'));
-                    setPhone(safeStorage.getItem('motoride_captain_phone') || captain?.phone || (isMojo ? '+91 9876543210' : ''));
-                    setEmail(safeStorage.getItem('motoride_captain_email') || captain?.email || (isMojo ? 'mojobiketaxi@gmail.com' : ''));
+                    setName(safeStorage.getItem('motoride_captain_name') || (captain?.full_name && captain.full_name !== 'Passenger' && captain.full_name !== 'Ritu Sharma' ? captain.full_name : undefined) || (isMojo ? 'Hemant kashyap' : 'Captain'));
+                    setPhone(safeStorage.getItem('motoride_captain_phone') || (captain?.phone && captain.phone !== '9876543210' ? captain.phone : undefined) || (isMojo ? '+91 9876543210' : ''));
+                    setEmail(safeStorage.getItem('motoride_captain_email') || (captain?.email && captain.email.toLowerCase() !== 'osmskart@gmail.com' && captain.email.toLowerCase() !== 'passenger@motoride.app' ? captain.email : undefined) || (isMojo ? 'mojobiketaxi@gmail.com' : ''));
                     setVehicleModel(safeStorage.getItem('motoride_captain_vehicle_model') || captain?.vehicle?.model || (isMojo ? 'Honda Activa 6G' : 'Motorcycle'));
                     setPlateNumber(safeStorage.getItem('motoride_captain_plate') || captain?.vehicle?.plate_number || (isMojo ? 'PB65AX9922' : ''));
                     setDrivingLicense(safeStorage.getItem('motoride_captain_dl') || (captain as any)?.license_number || '');

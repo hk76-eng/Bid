@@ -154,14 +154,16 @@ export const CaptainWorkspace: React.FC<CaptainWorkspaceProps> = ({
   onToggleOnline: propToggleOnline,
   onActiveTripChange,
 }) => {
-  const authUser = currentUser || supabaseAuth.getCurrentUser();
+  // Strictly enforce that authUser is a Captain account, never a passenger account
+  const authUser = (currentUser && currentUser.role === 'captain')
+    ? currentUser
+    : supabaseAuth.getCurrentUserForRole('captain');
   const isMojobiketaxi =
     (authUser?.email?.toLowerCase().trim() === 'mojobiketaxi@gmail.com') ||
-    (currentUser?.email?.toLowerCase().trim() === 'mojobiketaxi@gmail.com');
+    (captainId === 'cpt_mojobiketaxi');
   const storedSavedName = safeStorage.getItem('motoride_captain_name');
   const resolvedInitialName =
     storedSavedName ||
-    currentUser?.name ||
     authUser?.name ||
     (captainName && captainName !== 'Captain' ? captainName : undefined) ||
     (isMojobiketaxi ? 'Hemant kashyap' : 'Captain');
@@ -181,9 +183,9 @@ export const CaptainWorkspace: React.FC<CaptainWorkspaceProps> = ({
       return {
         id: effId,
         profile_id: `prof_${effId}`,
-        full_name: storedName || currentUser?.name || authUser?.name || resolvedInitialName,
-        email: storedEmail || currentUser?.email || authUser?.email || (isMojobiketaxi ? 'mojobiketaxi@gmail.com' : ''),
-        phone: storedPhone || currentUser?.phone || authUser?.phone || (isMojobiketaxi ? '+91 9876543210' : ''),
+        full_name: storedName || authUser?.name || resolvedInitialName,
+        email: storedEmail || authUser?.email || (isMojobiketaxi ? 'mojobiketaxi@gmail.com' : ''),
+        phone: storedPhone || authUser?.phone || (isMojobiketaxi ? '+91 9876543210' : ''),
         avatar_url: storedAvatar || authUser.avatarUrl,
         is_online: true,
         is_approved: true,
@@ -195,8 +197,8 @@ export const CaptainWorkspace: React.FC<CaptainWorkspaceProps> = ({
         vehicle: {
           id: `veh_${effId}`,
           captain_id: effId,
-          model: storedModel || currentUser?.vehicleModel || authUser?.vehicleModel || (isMojobiketaxi ? 'Honda Activa 6G' : 'Motorcycle'),
-          plate_number: storedPlate || currentUser?.plateNumber || authUser?.plateNumber || (isMojobiketaxi ? 'PB65AX9922' : ''),
+          model: storedModel || authUser?.vehicleModel || (isMojobiketaxi ? 'Honda Activa 6G' : 'Motorcycle'),
+          plate_number: storedPlate || authUser?.plateNumber || (isMojobiketaxi ? 'PB65AX9922' : ''),
           vehicle_type: (authUser.vehicleType as any) || 'bike',
           color: 'Black',
           is_active: true,
@@ -1318,11 +1320,11 @@ export const CaptainWorkspace: React.FC<CaptainWorkspaceProps> = ({
         const storedSos = safeStorage.getItem('motoride_captain_sos');
         const storedAvatar = safeStorage.getItem('motoride_captain_avatar');
 
-        const resolvedName = storedName || cpt.full_name || currentUser?.name || authUser?.name || resolvedInitialName || (isMojo ? 'Hemant kashyap' : 'Captain');
-        const resolvedPhone = storedPhone || cpt.phone || currentUser?.phone || authUser?.phone || (isMojo ? '+91 9876543210' : '');
-        const resolvedEmail = storedEmail || cpt.email || currentUser?.email || authUser?.email || (isMojo ? 'mojobiketaxi@gmail.com' : '');
-        const resolvedModel = storedModel || cpt.vehicle?.model || (currentUser as any)?.vehicleModel || (authUser as any)?.vehicleModel || (isMojo ? 'Honda Activa 6G' : 'Motorcycle');
-        const resolvedPlate = storedPlate || cpt.vehicle?.plate_number || (currentUser as any)?.plateNumber || (authUser as any)?.plateNumber || (isMojo ? 'PB65AX9922' : '');
+        const resolvedName = storedName || cpt.full_name || authUser?.name || resolvedInitialName || (isMojo ? 'Hemant kashyap' : 'Captain');
+        const resolvedPhone = storedPhone || cpt.phone || authUser?.phone || (isMojo ? '+91 9876543210' : '');
+        const resolvedEmail = storedEmail || cpt.email || authUser?.email || (isMojo ? 'mojobiketaxi@gmail.com' : '');
+        const resolvedModel = storedModel || cpt.vehicle?.model || (authUser as any)?.vehicleModel || (isMojo ? 'Honda Activa 6G' : 'Motorcycle');
+        const resolvedPlate = storedPlate || cpt.vehicle?.plate_number || (authUser as any)?.plateNumber || (isMojo ? 'PB65AX9922' : '');
 
         setCaptain((prev) => ({
           ...(prev || ({} as Captain)),
